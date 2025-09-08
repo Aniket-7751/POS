@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { createCatalogue, updateCatalogue } from './catalogueApi';
+import { createCatalogue, updateCatalogue, buildFormData, fileToBase64 } from './catalogueApi';
 import { Catalogue } from './types';
 
 const initialState: Catalogue = {
@@ -62,8 +62,10 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'thumbnail') => {
     if (e.target.files && e.target.files[0]) {
-      if (type === 'image') setImage(e.target.files[0]);
-      else setThumbnail(e.target.files[0]);
+      const file = e.target.files[0];
+      console.log(`File selected for ${type}:`, file.name, file.size, file.type);
+      if (type === 'image') setImage(file);
+      else setThumbnail(file);
     }
   };
 
@@ -88,13 +90,37 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateStep2()) return;
-    if (editId) {
-      await updateCatalogue(editId, form);
-    } else {
-      await createCatalogue(form);
+
+    try {
+      console.log('Submitting catalogue with files:', { image: !!image, thumbnail: !!thumbnail });
+
+      // Prefer base64 payload so it works across machines without shared disk
+      let payload: any = { ...form };
+      if (image) {
+        payload.image = await fileToBase64(image);
+      }
+      if (thumbnail) {
+        payload.thumbnail = await fileToBase64(thumbnail);
+      }
+
+      if (editId) {
+        console.log('Updating catalogue with base64 (if provided)...');
+        await updateCatalogue(editId, payload);
+      } else {
+        console.log('Creating catalogue with base64 (if provided)...');
+        await createCatalogue(payload);
+      }
+      
+      console.log('Catalogue saved successfully, calling onBack...');
+      setForm(initialState);
+      setImage(null);
+      setThumbnail(null);
+      setError('');
+      onBack();
+    } catch (error) {
+      console.error('Error saving catalogue:', error);
+      setError('Failed to save catalogue. Please try again.');
     }
-    setForm(initialState);
-    onBack();
   };
 
   return (

@@ -9,8 +9,7 @@ export const getCatalogueBySKU = (sku: string) => catalogueAPI.getBySKU(sku);
 export const getCatalogueByBarcode = (barcode: string) => catalogueAPI.getByBarcode(barcode);
 
 // File upload methods
-export const createCatalogueWithFiles = (data: FormData) => catalogueAPI.createWithFiles(data);
-export const updateCatalogueWithFiles = (id: string, data: FormData) => catalogueAPI.updateWithFiles(id, data);
+// Deprecated: file-upload endpoints removed in favor of base64 JSON payloads
 
 // Helper function to create FormData for file uploads
 export const buildFormData = (formData: any, imageFile?: File, thumbnailFile?: File) => {
@@ -36,4 +35,14 @@ export const buildFormData = (formData: any, imageFile?: File, thumbnailFile?: F
   }
   
   return data;
+};
+
+// Helper to convert File to base64 data URL
+export const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 };

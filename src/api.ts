@@ -64,17 +64,6 @@ export const catalogueAPI = {
   delete: (id: string) => api.delete(`/catalogues/${id}`),
   getBySKU: (sku: string) => api.get(`/sales/product/sku/${sku}`),
   getByBarcode: (barcode: string) => api.get(`/sales/product/barcode/${barcode}`),
-  // FormData methods for file uploads
-  createWithFiles: (data: FormData) => api.post('/catalogues', data, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  }),
-  updateWithFiles: (id: string, data: FormData) => api.put(`/catalogues/${id}`, data, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  }),
 };
 
 // Sales/Transaction API

@@ -10,10 +10,20 @@ const CatalogueModule: React.FC = () => {
   const [showAdd, setShowAdd] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Catalogue | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const fetchCatalogues = async () => {
-    const res = await getCatalogues();
-    setCatalogues(res.data as Catalogue[]);
+    console.log('Fetching catalogues...');
+    setLoading(true);
+    try {
+      const res = await getCatalogues();
+      console.log('Catalogues fetched:', res.data);
+      setCatalogues(res.data as Catalogue[]);
+    } catch (error) {
+      console.error('Error fetching catalogues:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -32,10 +42,25 @@ const CatalogueModule: React.FC = () => {
   };
 
   if (showAdd) {
-    return <AddCataloguePage onBack={() => { setShowAdd(false); fetchCatalogues(); }} />;
+    return <AddCataloguePage onBack={() => { 
+      console.log('AddCataloguePage onBack called'); 
+      setShowAdd(false); 
+      // Add a small delay to ensure database is updated
+      setTimeout(() => {
+        fetchCatalogues();
+      }, 200);
+    }} />;
   }
   if (editId && editData) {
-    return <AddCataloguePage onBack={() => { setEditId(null); setEditData(null); fetchCatalogues(); }} editId={editId} editData={editData} />;
+    return <AddCataloguePage onBack={() => { 
+      console.log('EditCataloguePage onBack called'); 
+      setEditId(null); 
+      setEditData(null); 
+      // Add a small delay to ensure database is updated
+      setTimeout(() => {
+        fetchCatalogues();
+      }, 200);
+    }} editId={editId} editData={editData} />;
   }
 
   return (
@@ -60,12 +85,15 @@ const CatalogueModule: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {catalogues.map(cat => (
+            {catalogues.map(cat => {
+              console.log('Rendering catalogue item:', cat.itemName, 'thumbnail:', cat.thumbnail);
+              return (
               <tr key={cat._id} style={{ borderBottom: '1px solid #f0f0f0', fontSize: 15 }}>
                 <td style={{ padding: 14 }}>
                   {cat.thumbnail ? (
                     <img 
-                      src={`http://localhost:5000${cat.thumbnail}`} 
+                      key={`${cat._id}-${cat.thumbnail}`}
+                      src={cat.thumbnail.startsWith('data:image') ? cat.thumbnail : `http://localhost:5000${cat.thumbnail}`} 
                       alt={cat.itemName}
                       style={{ 
                         width: 50, 
@@ -75,6 +103,7 @@ const CatalogueModule: React.FC = () => {
                         border: '1px solid #ddd' 
                       }}
                       onError={(e) => {
+                        console.log('Image failed to load:', cat.thumbnail);
                         e.currentTarget.style.display = 'none';
                       }}
                     />
@@ -118,7 +147,8 @@ const CatalogueModule: React.FC = () => {
                   <button onClick={() => handleDelete(cat._id!)} style={{ background: 'none', border: 'none', color: '#e74c3c', fontWeight: 600, cursor: 'pointer' }}>Delete</button>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
