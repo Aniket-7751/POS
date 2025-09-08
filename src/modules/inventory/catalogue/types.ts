@@ -26,6 +26,7 @@ export interface Catalogue {
   thumbnail?: string;
   instructions?: string;
   expiry?: number;
+  organizationId?: string;
   createdAt?: string;
   updatedAt?: string;
 }

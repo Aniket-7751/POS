@@ -56,13 +56,25 @@ const AddOrganizationPage: React.FC<AddOrganizationPageProps> = ({ onBack, editI
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
-    if (editId) {
-      await updateOrganization(editId, form);
-    } else {
-      await createOrganization(form);
+    
+    console.log('Form submission started:', { editId, form });
+    
+    try {
+      if (editId) {
+        console.log('Calling updateOrganization API with:', { editId, form });
+        await updateOrganization(editId, form);
+        console.log('Update successful');
+      } else {
+        console.log('Calling createOrganization API with:', form);
+        await createOrganization(form);
+        console.log('Create successful');
+      }
+      setForm(initialState);
+      onBack();
+    } catch (error) {
+      console.error('API call failed:', error);
+      setError('Failed to save organization. Please try again.');
     }
-    setForm(initialState);
-    onBack();
   };
 
   return (
@@ -87,7 +99,7 @@ const AddOrganizationPage: React.FC<AddOrganizationPageProps> = ({ onBack, editI
               </div>
             </div>
             <div style={{ marginBottom: 24 }}>
-              <label style={{ fontWeight: 500 }}>Address *</label>
+              <label style={{ fontWeight: 500 }}>Address</label>
               <input name="address" placeholder="Enter organization address" value={form.address} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
             </div>
             <div style={{ fontWeight: 700, fontSize: 22, marginBottom: 24 }}>Contact Information</div>

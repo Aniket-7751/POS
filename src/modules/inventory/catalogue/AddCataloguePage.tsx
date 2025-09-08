@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { createCatalogue, updateCatalogue } from './catalogueApi';
+import { createCatalogue, updateCatalogue, buildFormData, fileToBase64 } from './catalogueApi';
 import { Catalogue } from './types';
 
 const initialState: Catalogue = {
@@ -20,6 +20,7 @@ const initialState: Catalogue = {
   thumbnail: '',
   instructions: '',
   expiry: 0,
+  organizationId: '',
 };
 
 interface AddCataloguePageProps {
@@ -43,19 +44,34 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setForm({ ...form, [name]: name === 'expiry' ? Number(value) : value });
+    if (name === 'expiry' || name === 'price' || name === 'stock') {
+      setForm({ ...form, [name]: Number(value) });
+    } else if (name.startsWith('nutritionValue.')) {
+      const nutritionField = name.split('.')[1];
+      setForm({ 
+        ...form, 
+        nutritionValue: { 
+          ...form.nutritionValue, 
+          [nutritionField]: Number(value) 
+        } 
+      });
+    } else {
+      setForm({ ...form, [name]: value });
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'thumbnail') => {
     if (e.target.files && e.target.files[0]) {
-      if (type === 'image') setImage(e.target.files[0]);
-      else setThumbnail(e.target.files[0]);
+      const file = e.target.files[0];
+      console.log(`File selected for ${type}:`, file.name, file.size, file.type);
+      if (type === 'image') setImage(file);
+      else setThumbnail(file);
     }
   };
 
   const validateStep1 = () => {
-    if (!form.sku || !form.itemName || !form.volumeOfMeasurement) {
-      setError('Please fill all required fields');
+    if (!form.sku || !form.itemName || !form.volumeOfMeasurement || !form.categoryId || !form.organizationId) {
+      setError('Please fill all required fields (SKU, Item Name, Volume, Category ID, Organization ID)');
       return false;
     }
     setError('');
@@ -74,13 +90,37 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateStep2()) return;
-    if (editId) {
-      await updateCatalogue(editId, form);
-    } else {
-      await createCatalogue(form);
+
+    try {
+      console.log('Submitting catalogue with files:', { image: !!image, thumbnail: !!thumbnail });
+
+      // Prefer base64 payload so it works across machines without shared disk
+      let payload: any = { ...form };
+      if (image) {
+        payload.image = await fileToBase64(image);
+      }
+      if (thumbnail) {
+        payload.thumbnail = await fileToBase64(thumbnail);
+      }
+
+      if (editId) {
+        console.log('Updating catalogue with base64 (if provided)...');
+        await updateCatalogue(editId, payload);
+      } else {
+        console.log('Creating catalogue with base64 (if provided)...');
+        await createCatalogue(payload);
+      }
+      
+      console.log('Catalogue saved successfully, calling onBack...');
+      setForm(initialState);
+      setImage(null);
+      setThumbnail(null);
+      setError('');
+      onBack();
+    } catch (error) {
+      console.error('Error saving catalogue:', error);
+      setError('Failed to save catalogue. Please try again.');
     }
-    setForm(initialState);
-    onBack();
   };
 
   return (
@@ -96,7 +136,7 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
             {step === 1 ? (
               <>
                 <div style={{ fontWeight: 700, fontSize: 22, marginBottom: 24 }}>Catalogue Information</div>
-                <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+                <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
                   <div style={{ flex: 1 }}>
                     <label>Item ID *</label>
                     <input name="itemId" value={form.itemId} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
@@ -106,7 +146,7 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
                     <input name="sku" value={form.sku} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+                <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
                   <div style={{ flex: 1 }}>
                     <label>Item Name *</label>
                     <input name="itemName" value={form.itemName} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
@@ -116,7 +156,7 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
                     <input name="categoryId" value={form.categoryId} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+                <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
                   <div style={{ flex: 1 }}>
                     <label>Volume of Measurement *</label>
                     <input name="volumeOfMeasurement" value={form.volumeOfMeasurement} onChange={handleChange} required placeholder="e.g., 1kg, 500ml, 1 piece" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
@@ -126,7 +166,7 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
                     <input name="sourceOfOrigin" value={form.sourceOfOrigin} onChange={handleChange} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+                <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
                   <div style={{ flex: 1 }}>
                     <label>Price *</label>
                     <input name="price" type="number" value={form.price} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
@@ -144,9 +184,59 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
                   <label>Instructions</label>
                   <input name="instructions" value={form.instructions} onChange={handleChange} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
                 </div>
+                <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
+                  <div style={{ flex: 1 }}>
+                    <label>Status *</label>
+                    <select name="status" value={form.status} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label>Organization ID *</label>
+                    <input name="organizationId" value={form.organizationId || ''} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                  </div>
+                </div>
                 <div style={{ marginBottom: 16 }}>
                   <label>Expiry (in hours)</label>
                   <input name="expiry" type="number" value={form.expiry} onChange={handleChange} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                </div>
+                
+                {/* Nutrition Value Section */}
+                <div style={{ marginBottom: 16, padding: 16, backgroundColor: '#f8f9fa', borderRadius: 8, border: '1px solid #e9ecef' }}>
+                  <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 12, color: '#495057' }}>Nutrition Information (per 100g)</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 26 }}>
+                    <div>
+                      <label>Calories</label>
+                      <input name="nutritionValue.calories" type="number" value={form.nutritionValue?.calories || ''} onChange={handleChange} placeholder="kcal" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    </div>
+                    <div>
+                      <label>Protein (g)</label>
+                      <input name="nutritionValue.protein" type="number" value={form.nutritionValue?.protein || ''} onChange={handleChange} placeholder="grams" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    </div>
+                    <div>
+                      <label>Fat (g)</label>
+                      <input name="nutritionValue.fat" type="number" value={form.nutritionValue?.fat || ''} onChange={handleChange} placeholder="grams" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    </div>
+                  </div>
+                  <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 26 }}>
+                    <div>
+                      <label>Carbs (g)</label>
+                      <input name="nutritionValue.carbs" type="number" value={form.nutritionValue?.carbs || ''} onChange={handleChange} placeholder="grams" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    </div>
+                    <div>
+                      <label>Fiber (g)</label>
+                      <input name="nutritionValue.fiber" type="number" value={form.nutritionValue?.fiber || ''} onChange={handleChange} placeholder="grams" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    </div>
+                    <div>
+                      <label>Sugar (g)</label>
+                      <input name="nutritionValue.sugar" type="number" value={form.nutritionValue?.sugar || ''} onChange={handleChange} placeholder="grams" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    </div>
+                    <div>
+                      <label>Sodium (mg)</label>
+                      <input name="nutritionValue.sodium" type="number" value={form.nutritionValue?.sodium || ''} onChange={handleChange} placeholder="milligrams" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    </div>
+                  </div>
                 </div>
                 {error && <div style={{ color: 'red', marginBottom: 16 }}>{error}</div>}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 16, marginTop: 32 }}>
