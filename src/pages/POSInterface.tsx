@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { salesAPI, catalogueAPI, billingAPI, storeAPI } from '../api';
+import PaymentModal from '../components/PaymentModal';
 
 interface CartItem {
   sku: string;
@@ -27,6 +28,7 @@ const POSInterface: React.FC = () => {
   const [stores, setStores] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Load stores on component mount
   useEffect(() => {
@@ -164,6 +166,12 @@ const POSInterface: React.FC = () => {
       return;
     }
 
+    // Show payment modal instead of direct processing
+    setShowPaymentModal(true);
+  };
+
+  // Handle payment completion from modal
+  const handlePaymentComplete = async (paymentMethod: string, transactionId?: string) => {
     try {
       setLoading(true);
       
@@ -173,7 +181,8 @@ const POSInterface: React.FC = () => {
         items: cart,
         paymentMethod,
         customerDetails: Object.keys(customerDetails).length > 0 ? customerDetails : undefined,
-        cashier: localStorage.getItem('userId') // Get from auth context
+        cashier: localStorage.getItem('userId'), // Get from auth context
+        transactionId: transactionId || `TXN${Date.now()}`
       };
 
       const transactionResponse = await salesAPI.createTransaction(transactionData);
@@ -187,6 +196,8 @@ const POSInterface: React.FC = () => {
       setMessage(`Transaction completed! Bill No: ${billResponse.data.billNo}`);
       setCart([]);
       setCustomerDetails({});
+      setBarcodeInput('');
+      setQuantityInput(1);
       
     } catch (error: any) {
       setMessage(error.response?.data?.error || 'Payment failed');
@@ -342,33 +353,6 @@ const POSInterface: React.FC = () => {
           </div>
         </div>
 
-        {/* Payment Method */}
-        <div style={{ marginBottom: '20px' }}>
-          <h3 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: 'bold', color: '#333' }}>Payment Method</h3>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {['cash', 'card', 'UPI'].map((method) => (
-              <button
-                key={method}
-                onClick={() => setPaymentMethod(method as any)}
-                style={{
-                  flex: 1,
-                  padding: '12px 16px',
-                  background: paymentMethod === method ? '#6c3fc5' : '#f8f9fa',
-                  color: paymentMethod === method ? 'white' : '#333',
-                  border: paymentMethod === method ? 'none' : '2px solid #e0e0e0',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  textTransform: 'uppercase',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                {method}
-              </button>
-            ))}
-          </div>
-        </div>
 
         {message && (
           <div style={{
@@ -540,6 +524,15 @@ const POSInterface: React.FC = () => {
           {loading ? 'Processing...' : 'Process Payment'}
         </button>
       </div>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        totalAmount={grandTotal}
+        onPaymentComplete={handlePaymentComplete}
+        customerDetails={customerDetails}
+      />
     </div>
   );
 };

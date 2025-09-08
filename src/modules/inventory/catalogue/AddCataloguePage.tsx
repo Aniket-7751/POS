@@ -4,6 +4,8 @@ import { createCatalogue, updateCatalogue, buildFormData, fileToBase64 } from '.
 import { getCategories } from '../category/categoryApi';
 import { getOrganizations } from '../../organization/organizationApi';
 import { compressImage } from '../../../utils/imageCompression';
+import { generateBarcodeNumber, generateLongBarcodeNumber, BarcodeData } from '../../../utils/barcodeGenerator';
+import BarcodeDisplay from '../../../components/BarcodeDisplay';
 import { Catalogue } from './types';
 import { Category } from '../category/types';
 import { Organization } from '../../organization/types';
@@ -44,6 +46,8 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [volumeValue, setVolumeValue] = useState('');
   const [volumeUnit, setVolumeUnit] = useState('');
+  const [barcodeType, setBarcodeType] = useState<'12' | '16'>('12');
+  const [generatedBarcode, setGeneratedBarcode] = useState('');
 
   useEffect(() => {
     if (editData) {
@@ -81,6 +85,27 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
       setForm(prev => ({ ...prev, volumeOfMeasurement: `${volumeValue} ${volumeUnit}` }));
     }
   }, [volumeValue, volumeUnit]);
+
+  // Generate barcode when SKU, price, or volume changes
+  useEffect(() => {
+    if (form.sku && form.price > 0 && volumeValue && volumeUnit) {
+      console.log('Generating barcode with data:', { sku: form.sku, price: form.price, weight: `${volumeValue}${volumeUnit}`, type: barcodeType });
+      
+      const barcodeData: BarcodeData = {
+        sku: form.sku,
+        price: form.price,
+        weight: `${volumeValue}${volumeUnit}`
+      };
+      
+      const barcode = barcodeType === '12' 
+        ? generateBarcodeNumber(barcodeData)
+        : generateLongBarcodeNumber(barcodeData);
+      
+      console.log('Generated barcode:', barcode);
+      setGeneratedBarcode(barcode);
+      setForm(prev => ({ ...prev, barcode }));
+    }
+  }, [form.sku, form.price, volumeValue, volumeUnit, barcodeType]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -127,8 +152,8 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
   };
 
   const validateStep2 = () => {
-    if (form.barcode && !/^\d{12}$/.test(form.barcode)) {
-      setError('Barcode must be 12 digits');
+    if (form.barcode && !/^\d{12}$/.test(form.barcode) && !/^\d{16}$/.test(form.barcode)) {
+      setError('Barcode must be 12 or 16 digits');
       return false;
     }
     setError('');
@@ -237,8 +262,6 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
                         <option value="gm">gm</option>
                         <option value="piece">piece</option>
                         <option value="pieces">pieces</option>
-                        <option value="ml">ml</option>
-                        <option value="l">l</option>
                       </select>
                     </div>
                   </div>
@@ -343,9 +366,94 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
                   <label>Upload Thumbnail Image</label>
                   <input type="file" accept="image/*" onChange={e => handleFileChange(e, 'thumbnail')} style={{ display: 'block', marginTop: 4 }} />
                 </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label>Barcode (12 digits)</label>
-                  <input name="barcode" value={form.barcode} onChange={handleChange} required maxLength={12} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                {/* Barcode Generation Section */}
+                <div style={{ marginBottom: 16, padding: 16, backgroundColor: '#f8f9fa', borderRadius: 8, border: '1px solid #e9ecef' }}>
+                  <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 12, color: '#495057' }}>Product Barcode</div>
+                  
+                  <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+                    <div style={{ flex: 1 }}>
+                      <label>Barcode Type</label>
+                      <select 
+                        value={barcodeType} 
+                        onChange={(e) => setBarcodeType(e.target.value as '12' | '16')}
+                        style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}
+                      >
+                        <option value="12">12-Digit Barcode</option>
+                        <option value="16">16-Digit Barcode</option>
+                      </select>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label>Generated Barcode</label>
+                      <input 
+                        name="barcode" 
+                        value={form.barcode} 
+                        readOnly
+                        style={{ 
+                          width: '100%', 
+                          padding: 10, 
+                          borderRadius: 6, 
+                          border: '1px solid #ccc', 
+                          marginTop: 4,
+                          backgroundColor: '#f8f9fa',
+                          fontFamily: 'monospace',
+                          fontSize: '14px'
+                        }} 
+                      />
+                    </div>
+                  </div>
+                  
+                  {!form.barcode && form.sku && form.price > 0 && volumeValue && volumeUnit && (
+                    <div style={{ marginBottom: 16, textAlign: 'center' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const barcodeData: BarcodeData = {
+                            sku: form.sku,
+                            price: form.price,
+                            weight: `${volumeValue}${volumeUnit}`
+                          };
+                          
+                          const barcode = barcodeType === '12' 
+                            ? generateBarcodeNumber(barcodeData)
+                            : generateLongBarcodeNumber(barcodeData);
+                          
+                          setGeneratedBarcode(barcode);
+                          setForm(prev => ({ ...prev, barcode }));
+                        }}
+                        style={{
+                          padding: '8px 16px',
+                          background: '#28a745',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: 6,
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontWeight: '600'
+                        }}
+                      >
+                        Generate Barcode
+                      </button>
+                    </div>
+                  )}
+                  
+                  {generatedBarcode && (
+                    <div style={{ textAlign: 'center', marginTop: 16 }}>
+                      <div style={{ marginBottom: 8, fontSize: '14px', fontWeight: '600', color: '#495057' }}>
+                        Barcode Preview
+                      </div>
+                      <BarcodeDisplay 
+                        barcodeNumber={generatedBarcode}
+                        width={2}
+                        height={80}
+                        showText={true}
+                        format="CODE128"
+                      />
+                    </div>
+                  )}
+                  
+                  <div style={{ marginTop: 12, fontSize: '12px', color: '#6c757d', textAlign: 'center' }}>
+                    Barcode is automatically generated from SKU, Price, and Volume information
+                  </div>
                 </div>
                 {error && <div style={{ color: 'red', marginBottom: 16 }}>{error}</div>}
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginTop: 32 }}>
