@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 
 const storeSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
   storeId: { type: String, required: true, unique: true },
   storeName: { type: String, required: true },
   storeLocation: { type: String, required: true },
@@ -11,7 +12,7 @@ const storeSchema = new mongoose.Schema({
   email: { type: String, required: true },
   storePicture: { type: String }, // URL or path to store picture
   status: { type: String, enum: ['active', 'inactive'], default: 'active' },
-  organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', required: true }
-}, { timestamps: true });
+  organizationId: { type: String, ref: 'Organization', required: true }
+}, { timestamps: true, _id: false });
 
 module.exports = mongoose.model('Store', storeSchema);

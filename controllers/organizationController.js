@@ -2,7 +2,10 @@ const Organization = require('../models/Organization');
 
 exports.createOrganization = async (req, res) => {
   try {
-    const org = new Organization(req.body);
+    const orgData = { ...req.body };
+    // Use organizationId as the _id
+    orgData._id = orgData.organizationId;
+    const org = new Organization(orgData);
     await org.save();
     res.status(201).json(org);
   } catch (err) {
@@ -31,10 +34,16 @@ exports.getOrganizationById = async (req, res) => {
 
 exports.updateOrganizationById = async (req, res) => {
   try {
+    console.log('updateOrganizationById called with:', { id: req.params.id, body: req.body });
     const org = await Organization.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!org) return res.status(404).json({ error: 'Not found' });
+    if (!org) {
+      console.log('Organization not found with id:', req.params.id);
+      return res.status(404).json({ error: 'Not found' });
+    }
+    console.log('Organization updated successfully:', org);
     res.json(org);
   } catch (err) {
+    console.error('Error updating organization:', err);
     res.status(400).json({ error: err.message });
   }
 };

@@ -2,7 +2,10 @@ const Store = require('../models/Store');
 
 exports.createStore = async (req, res) => {
   try {
-    const store = new Store(req.body);
+    const storeData = { ...req.body };
+    // Use storeId as the _id
+    storeData._id = storeData.storeId;
+    const store = new Store(storeData);
     await store.save();
     res.status(201).json(store);
   } catch (err) {

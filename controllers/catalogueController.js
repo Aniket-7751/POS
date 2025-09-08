@@ -15,6 +15,9 @@ exports.createCatalogue = async (req, res) => {
       }
     }
     
+    // Use itemId as the _id
+    catalogueData._id = catalogueData.itemId;
+    
     const catalogue = new Catalogue(catalogueData);
     await catalogue.save();
     res.status(201).json(catalogue);
@@ -54,6 +57,11 @@ exports.updateCatalogueById = async (req, res) => {
       if (req.files.thumbnail) {
         catalogueData.thumbnail = `/uploads/${req.files.thumbnail[0].filename}`;
       }
+    }
+    
+    // Use itemId as the _id if provided
+    if (catalogueData.itemId) {
+      catalogueData._id = catalogueData.itemId;
     }
     
     const catalogue = await Catalogue.findByIdAndUpdate(req.params.id, catalogueData, { new: true });

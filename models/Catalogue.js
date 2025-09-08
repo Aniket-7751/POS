@@ -1,10 +1,11 @@
 const mongoose = require('mongoose');
 
 const catalogueSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
   itemId: { type: String, required: true },
   sku: { type: String, required: true },
   itemName: { type: String, required: true },
-  categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
+  categoryId: { type: String, ref: 'Category', required: true },
   volumeOfMeasurement: { type: String, required: true }, // e.g., "1kg", "500ml"
   sourceOfOrigin: { type: String },
   nutritionValue: {
@@ -25,8 +26,8 @@ const catalogueSchema = new mongoose.Schema({
   thumbnail: { type: String }, // thumbnail URL or path
   instructions: { type: String },
   expiry: { type: Number }, // in hours
-  organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', required: true }
-}, { timestamps: true });
+  organizationId: { type: String, ref: 'Organization', required: true }
+}, { timestamps: true, _id: false });
 
 // Compound indexes to ensure uniqueness within organization
 catalogueSchema.index({ itemId: 1, organizationId: 1 }, { unique: true });

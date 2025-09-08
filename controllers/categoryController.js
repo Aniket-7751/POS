@@ -2,7 +2,10 @@ const Category = require('../models/Category');
 
 exports.createCategory = async (req, res) => {
   try {
-    const category = new Category({ fields: req.body.fields });
+    const categoryData = { ...req.body };
+    // Use categoryId as the _id
+    categoryData._id = categoryData.categoryId;
+    const category = new Category(categoryData);
     await category.save();
     res.status(201).json(category);
   } catch (err) {
@@ -31,7 +34,12 @@ exports.getCategoryById = async (req, res) => {
 
 exports.updateCategoryById = async (req, res) => {
   try {
-    const category = await Category.findByIdAndUpdate(req.params.id, { fields: req.body.fields }, { new: true });
+    const categoryData = { ...req.body };
+    // Use categoryId as the _id if provided
+    if (categoryData.categoryId) {
+      categoryData._id = categoryData.categoryId;
+    }
+    const category = await Category.findByIdAndUpdate(req.params.id, categoryData, { new: true });
     if (!category) return res.status(404).json({ error: 'Not found' });
     res.json(category);
   } catch (err) {
