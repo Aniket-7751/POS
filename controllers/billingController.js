@@ -15,9 +15,14 @@ exports.generateBill = async (req, res) => {
     }
 
     // Get store and organization details
-    const store = await Store.findById(transaction.storeId._id).populate('organizationId');
+    const store = await Store.findById(transaction.storeId);
     if (!store) {
       return res.status(404).json({ error: 'Store not found' });
+    }
+    
+    const organization = await Organization.findById(store.organizationId);
+    if (!organization) {
+      return res.status(404).json({ error: 'Organization not found' });
     }
 
     // Generate bill number
@@ -27,12 +32,12 @@ exports.generateBill = async (req, res) => {
     const billingData = {
       billNo,
       transactionId: transaction._id,
-      storeId: transaction.storeId._id,
-      organizationId: store.organizationId._id,
+      storeId: transaction.storeId,
+      organizationId: store.organizationId,
       items: transaction.items,
       totalAmount: transaction.grandTotal,
       paymentMode: transaction.paymentMethod,
-      qrCodeUrl: transaction.paymentMethod === 'UPI' ? generateUPIQR(store.organizationId, transaction.grandTotal) : null,
+      qrCodeUrl: transaction.paymentMethod === 'UPI' ? generateUPIQR(organization, transaction.grandTotal) : null,
       dateTime: transaction.dateTime,
       customerDetails: transaction.customerDetails
     };

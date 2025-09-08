@@ -2,9 +2,9 @@ const mongoose = require('mongoose');
 
 const billingSchema = new mongoose.Schema({
   billNo: { type: String, required: true, unique: true },
-  transactionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Sale', required: true },
-  storeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Store', required: true },
-  organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', required: true },
+  transactionId: { type: String, ref: 'Sale', required: true },
+  storeId: { type: String, ref: 'Store', required: true },
+  organizationId: { type: String, ref: 'Organization', required: true },
   items: [{
     sku: { type: String, required: true },
     itemName: { type: String, required: true },
