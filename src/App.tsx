@@ -4,13 +4,15 @@ import './App.css';
 
 import POSInterface from './pages/POSInterface';
 import LoginSelector from './components/LoginSelector';
+import NoticeHeader from './components/NoticeHeader';
 
 import OrganizationModule from './modules/organization/OrganizationModule';
 import StoreModule from './modules/store/StoreModule';
 import CategoryModule from './modules/inventory/category/CategoryModule';
 import CatalogueModule from './modules/inventory/catalogue/CatalogueModule';
+import AdminDashboard from './modules/admin/AdminDashboard';
 
-type Page = 'pos' | 'organization' | 'store' | 'inventory' | 'category' | 'catalogue';
+type Page = 'admin' | 'pos' | 'organization' | 'store' | 'inventory' | 'category' | 'catalogue';
 
 interface User {
   id: string;
@@ -23,9 +25,10 @@ interface User {
 }
 
 function App() {
-  const [page, setPage] = React.useState<Page>('pos');
+  const [page, setPage] = React.useState<Page>('admin');
   const [user, setUser] = React.useState<User | null>(null);
   const [token, setToken] = React.useState<string | null>(localStorage.getItem('token'));
+  const [showNoticeHeader, setShowNoticeHeader] = React.useState<boolean>(true);
 
   // Set document title
   React.useEffect(() => {
@@ -136,6 +139,32 @@ function App() {
           padding: '20px 0',
           overflowY: 'auto'
         }}>
+          {/* Dashboard Section */}
+          <div style={{ 
+            padding: '0 20px 20px 20px'
+          }}>
+            <button style={{ 
+              width: '100%', 
+              margin: '0 0 8px 0', 
+              padding: '12px 16px', 
+              background: page==='admin' ? '#e53e3e' : 'transparent', 
+              color: page==='admin' ? '#fff' : '#ccc', 
+              border: 'none', 
+              borderRadius: '8px', 
+              fontSize: '14px', 
+              fontWeight: '500', 
+              cursor: 'pointer', 
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              textAlign: 'left'
+            }} onClick={() => setPage('admin')}>
+              <span style={{ fontSize: '16px' }}>📊</span>
+              Admin Dashboard
+            </button>
+          </div>
+
           {/* Master Data Section */}
           <div style={{ 
             padding: '0 20px 10px 20px'
@@ -357,12 +386,27 @@ function App() {
           )}
         </div>
       </aside>
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '40px 20px', marginLeft: '280px', minHeight: '100vh', width: 'calc(100% - 280px)' }}>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start', padding: '0', marginLeft: '280px', minHeight: '100vh', width: 'calc(100% - 280px)' }}>
+        {/* Notice Header - appears on all pages */}
+        {showNoticeHeader && (
+          <div style={{ position: 'relative', zIndex: 1000 }}>
+            <NoticeHeader 
+              autoScroll={true}
+              scrollSpeed={15}
+              showCloseButton={true}
+              onClose={(noticeId) => {
+                console.log('Notice closed:', noticeId);
+                setShowNoticeHeader(false);
+              }}
+            />
+          </div>
+        )}
+        {page === 'admin' && <AdminDashboard />}
         {page === 'pos' && <POSInterface />}
         {page === 'organization' && <OrganizationModule />}
         {page === 'store' && <StoreModule />}
-  {page === 'category' && <CategoryModule />}
-  {page === 'catalogue' && <CatalogueModule />}
+        {page === 'category' && <CategoryModule />}
+        {page === 'catalogue' && <CatalogueModule />}
       </main>
     </div>
   );
