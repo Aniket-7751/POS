@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  userId: { type: String, required: true, unique: true },
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
@@ -13,6 +15,6 @@ const userSchema = new mongoose.Schema({
     actions: [{ type: String, enum: ['read', 'write', 'delete', 'manage'] }]
   }],
   status: { type: String, enum: ['active', 'inactive'], default: 'active' }
-}, { timestamps: true });
+}, { timestamps: true, _id: false });
 
 module.exports = mongoose.model('User', userSchema);

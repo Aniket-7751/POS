@@ -93,7 +93,10 @@ const seedData = async () => {
 
     // Create organization admin user
     const orgHashedPassword = await bcrypt.hash('admin123', 10);
+    const orgUserId = 'USER001';
     const orgUser = new User({
+      _id: orgUserId,
+      userId: orgUserId,
       name: 'Organization Admin',
       email: 'admin@pos.com',
       password: orgHashedPassword,
@@ -113,7 +116,10 @@ const seedData = async () => {
 
     // Create store users
     const storeHashedPassword = await bcrypt.hash('store123', 10);
+    const storeUserId = 'USER002';
     const storeUser = new User({
+      _id: storeUserId,
+      userId: storeUserId,
       name: 'Store Manager',
       email: 'store@pos.com',
       password: storeHashedPassword,
