@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createOrganization, updateOrganization } from './organizationApi';
+import { compressImage } from '../../utils/imageCompression';
 import { Organization } from './types';
 
 const initialState: Organization = {
@@ -24,6 +25,7 @@ interface AddOrganizationPageProps {
 const AddOrganizationPage: React.FC<AddOrganizationPageProps> = ({ onBack, editId, editData }) => {
   const [form, setForm] = useState<Organization>(initialState);
   const [error, setError] = useState('');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (editData) {
@@ -34,6 +36,30 @@ const AddOrganizationPage: React.FC<AddOrganizationPageProps> = ({ onBack, editI
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: name === 'contactNumber' ? value.slice(0, 10) : value });
+  };
+
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      console.log('Logo file selected:', file.name, file.size, file.type);
+      
+      setLogoFile(file);
+      
+      try {
+        console.log(`Compressing logo: ${file.name}, original size: ${(file.size / 1024).toFixed(2)}KB`);
+        const compressedBase64 = await compressImage(file, 100);
+        console.log(`Compressed logo size: ${(compressedBase64.length * 0.75 / 1024).toFixed(2)}KB`);
+        setForm(prev => ({ ...prev, logo: compressedBase64 }));
+      } catch (error) {
+        console.error('Error compressing logo:', error);
+        // Fallback to original method if compression fails
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setForm(prev => ({ ...prev, logo: reader.result as string }));
+        };
+        reader.readAsDataURL(file);
+      }
+    }
   };
 
   const validate = () => {
@@ -70,6 +96,7 @@ const AddOrganizationPage: React.FC<AddOrganizationPageProps> = ({ onBack, editI
         console.log('Create successful');
       }
       setForm(initialState);
+      setLogoFile(null);
       onBack();
     } catch (error) {
       console.error('API call failed:', error);
@@ -119,8 +146,22 @@ const AddOrganizationPage: React.FC<AddOrganizationPageProps> = ({ onBack, editI
                 <input name="email" placeholder="Enter organization email" value={form.email} onChange={handleChange} required type="email" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
               </div>
               <div style={{ flex: 1 }}>
-                <label style={{ fontWeight: 500 }}>Logo URL</label>
-                <input name="logo" placeholder="Enter logo URL (optional)" value={form.logo} onChange={handleChange} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                <label style={{ fontWeight: 500 }}>Logo</label>
+                <input type="file" accept="image/*" onChange={handleLogoChange} style={{ display: 'block', marginTop: 4 }} />
+                {form.logo && (
+                  <img 
+                    src={form.logo} 
+                    alt="Logo Preview" 
+                    style={{ 
+                      width: 100, 
+                      height: 100, 
+                      objectFit: 'cover', 
+                      marginTop: 8, 
+                      borderRadius: 6,
+                      border: '1px solid #ddd'
+                    }} 
+                  />
+                )}
               </div>
             </div>
             <div style={{ fontWeight: 700, fontSize: 22, marginBottom: 24 }}>Tax Information</div>

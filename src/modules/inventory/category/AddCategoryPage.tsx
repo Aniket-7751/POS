@@ -1,7 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { createCategory, updateCategory } from './categoryApi';
+import { getOrganizations } from '../../organization/organizationApi';
 import { Category } from './types';
+import { Organization } from '../../organization/types';
 
 interface AddCategoryPageProps {
   onBack: () => void;
@@ -14,15 +16,29 @@ const AddCategoryPage: React.FC<AddCategoryPageProps> = ({ onBack, editId, editD
     categoryId: '',
     categoryName: '',
     categoryDescription: '',
-    status: 'active'
+    status: 'active',
+    organizationId: ''
   });
   const [error, setError] = useState('');
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
 
   useEffect(() => {
     if (editData) {
       setForm(editData);
     }
   }, [editData]);
+
+  useEffect(() => {
+    const fetchOrganizations = async () => {
+      try {
+        const res = await getOrganizations();
+        setOrganizations(res.data);
+      } catch (error) {
+        console.error('Error fetching organizations:', error);
+      }
+    };
+    fetchOrganizations();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -31,8 +47,8 @@ const AddCategoryPage: React.FC<AddCategoryPageProps> = ({ onBack, editId, editD
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.categoryId || !form.categoryName) {
-      setError('Category ID and Name are required');
+    if (!form.categoryId || !form.categoryName || !form.organizationId) {
+      setError('Category ID, Name, and Organization are required');
       return;
     }
     if (editId) {
@@ -40,7 +56,7 @@ const AddCategoryPage: React.FC<AddCategoryPageProps> = ({ onBack, editId, editD
     } else {
       await createCategory(form);
     }
-    setForm({ categoryId: '', categoryName: '', categoryDescription: '', status: 'active' });
+    setForm({ categoryId: '', categoryName: '', categoryDescription: '', status: 'active', organizationId: '' });
     onBack();
   };
 
@@ -69,12 +85,25 @@ const AddCategoryPage: React.FC<AddCategoryPageProps> = ({ onBack, editId, editD
               <label style={{ fontWeight: 500 }}>Description</label>
               <textarea name="categoryDescription" placeholder="Enter category description (optional)" value={form.categoryDescription} onChange={handleChange} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4, minHeight: '80px' }} />
             </div>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontWeight: 500 }}>Status *</label>
-              <select name="status" value={form.status} onChange={handleChange} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
+            <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontWeight: 500 }}>Status *</label>
+                <select name="status" value={form.status} onChange={handleChange} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontWeight: 500 }}>Organization *</label>
+                <select name="organizationId" value={form.organizationId} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}>
+                  <option value="">Select an organization</option>
+                  {organizations.map(org => (
+                    <option key={org._id} value={org._id}>
+                      {org.organizationName} ({org.organizationId})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             {error && <div style={{ color: 'red', marginBottom: 16 }}>{error}</div>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 16, marginTop: 32 }}>

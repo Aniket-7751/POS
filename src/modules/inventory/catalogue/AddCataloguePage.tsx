@@ -1,7 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { createCatalogue, updateCatalogue, buildFormData, fileToBase64 } from './catalogueApi';
+import { getCategories } from '../category/categoryApi';
+import { getOrganizations } from '../../organization/organizationApi';
+import { compressImage } from '../../../utils/imageCompression';
 import { Catalogue } from './types';
+import { Category } from '../category/types';
+import { Organization } from '../../organization/types';
 
 const initialState: Catalogue = {
   itemId: '',
@@ -35,12 +40,30 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
   const [error, setError] = useState('');
   const [image, setImage] = useState<File | null>(null);
   const [thumbnail, setThumbnail] = useState<File | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
 
   useEffect(() => {
     if (editData) {
       setForm(editData);
     }
   }, [editData]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [categoriesRes, organizationsRes] = await Promise.all([
+          getCategories(),
+          getOrganizations()
+        ]);
+        setCategories(categoriesRes.data);
+        setOrganizations(organizationsRes.data);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+    fetchData();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -71,7 +94,7 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
 
   const validateStep1 = () => {
     if (!form.sku || !form.itemName || !form.volumeOfMeasurement || !form.categoryId || !form.organizationId) {
-      setError('Please fill all required fields (SKU, Item Name, Volume, Category ID, Organization ID)');
+      setError('Please fill all required fields (SKU, Item Name, Volume, Category, Organization)');
       return false;
     }
     setError('');
@@ -152,8 +175,15 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
                     <input name="itemName" value={form.itemName} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label>Category ID *</label>
-                    <input name="categoryId" value={form.categoryId} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    <label>Category *</label>
+                    <select name="categoryId" value={form.categoryId} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}>
+                      <option value="">Select a category</option>
+                      {categories.map(category => (
+                        <option key={category._id} value={category._id}>
+                          {category.categoryName} ({category.categoryId})
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
@@ -172,8 +202,8 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
                     <input name="price" type="number" value={form.price} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label>Stock *</label>
-                    <input name="stock" type="number" value={form.stock} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    <label>Stock</label>
+                    <input name="stock" type="number" value={form.stock} onChange={handleChange} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
                   </div>
                 </div>
                 <div style={{ marginBottom: 16 }}>
@@ -193,8 +223,15 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
                     </select>
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label>Organization ID *</label>
-                    <input name="organizationId" value={form.organizationId || ''} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    <label>Organization *</label>
+                    <select name="organizationId" value={form.organizationId || ''} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}>
+                      <option value="">Select an organization</option>
+                      {organizations.map(org => (
+                        <option key={org._id} value={org._id}>
+                          {org.organizationName} ({org.organizationId})
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <div style={{ marginBottom: 16 }}>
