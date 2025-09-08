@@ -48,9 +48,13 @@ const CatalogueModule: React.FC = () => {
         <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
           <thead>
             <tr style={{ background: '#f5f6fa', color: '#222', fontWeight: 700, fontSize: 16 }}>
-              <th style={{ padding: 16, textAlign: 'left', borderTopLeftRadius: 8 }}>SKU ID</th>
+              <th style={{ padding: 16, textAlign: 'left', borderTopLeftRadius: 8 }}>Thumbnail</th>
+              <th style={{ padding: 16, textAlign: 'left' }}>SKU ID</th>
               <th style={{ padding: 16, textAlign: 'left' }}>Item Name</th>
               <th style={{ padding: 16, textAlign: 'left' }}>Volume</th>
+              <th style={{ padding: 16, textAlign: 'left' }}>Price</th>
+              <th style={{ padding: 16, textAlign: 'left' }}>Stock</th>
+              <th style={{ padding: 16, textAlign: 'left' }}>Status</th>
               <th style={{ padding: 16, textAlign: 'left' }}>Barcode</th>
               <th style={{ padding: 16, textAlign: 'left', borderTopRightRadius: 8 }}>Actions</th>
             </tr>
@@ -58,9 +62,56 @@ const CatalogueModule: React.FC = () => {
           <tbody>
             {catalogues.map(cat => (
               <tr key={cat._id} style={{ borderBottom: '1px solid #f0f0f0', fontSize: 15 }}>
+                <td style={{ padding: 14 }}>
+                  {cat.thumbnail ? (
+                    <img 
+                      src={`http://localhost:5000${cat.thumbnail}`} 
+                      alt={cat.itemName}
+                      style={{ 
+                        width: 50, 
+                        height: 50, 
+                        objectFit: 'cover', 
+                        borderRadius: 6, 
+                        border: '1px solid #ddd' 
+                      }}
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div style={{ 
+                      width: 50, 
+                      height: 50, 
+                      backgroundColor: '#f5f5f5', 
+                      borderRadius: 6, 
+                      border: '1px solid #ddd',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#999',
+                      fontSize: 12
+                    }}>
+                      No Image
+                    </div>
+                  )}
+                </td>
                 <td style={{ padding: 14 }}>{cat.sku}</td>
                 <td style={{ padding: 14 }}>{cat.itemName}</td>
                 <td style={{ padding: 14 }}>{cat.volumeOfMeasurement}</td>
+                <td style={{ padding: 14 }}>₹{cat.price}</td>
+                <td style={{ padding: 14 }}>{cat.stock}</td>
+                <td style={{ padding: 14 }}>
+                  <span style={{ 
+                    padding: '4px 8px', 
+                    borderRadius: 4, 
+                    fontSize: 12, 
+                    fontWeight: 600,
+                    backgroundColor: cat.status === 'active' ? '#d4edda' : '#f8d7da',
+                    color: cat.status === 'active' ? '#155724' : '#721c24'
+                  }}>
+                    {cat.status}
+                  </span>
+                </td>
                 <td style={{ padding: 14 }}>{cat.barcode || '-'}</td>
                 <td style={{ padding: 14 }}>
                   <button onClick={() => handleEdit(cat._id!)} style={{ background: 'none', border: 'none', color: '#2980b9', fontWeight: 600, cursor: 'pointer', marginRight: 12 }}>Edit</button>
