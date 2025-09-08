@@ -42,10 +42,20 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
   const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [volumeValue, setVolumeValue] = useState('');
+  const [volumeUnit, setVolumeUnit] = useState('');
 
   useEffect(() => {
     if (editData) {
       setForm(editData);
+      // Parse existing volume of measurement
+      if (editData.volumeOfMeasurement) {
+        const volumeMatch = editData.volumeOfMeasurement.match(/^(\d+(?:\.\d+)?)\s*(kg|gm|g|piece|pieces|ml|l)$/i);
+        if (volumeMatch) {
+          setVolumeValue(volumeMatch[1]);
+          setVolumeUnit(volumeMatch[2].toLowerCase());
+        }
+      }
     }
   }, [editData]);
 
@@ -64,6 +74,13 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
     };
     fetchData();
   }, []);
+
+  // Update volumeOfMeasurement when volumeValue or volumeUnit changes
+  useEffect(() => {
+    if (volumeValue && volumeUnit) {
+      setForm(prev => ({ ...prev, volumeOfMeasurement: `${volumeValue} ${volumeUnit}` }));
+    }
+  }, [volumeValue, volumeUnit]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -92,9 +109,17 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
     }
   };
 
+  const handleVolumeValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setVolumeValue(e.target.value);
+  };
+
+  const handleVolumeUnitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setVolumeUnit(e.target.value);
+  };
+
   const validateStep1 = () => {
-    if (!form.sku || !form.itemName || !form.volumeOfMeasurement || !form.categoryId || !form.organizationId) {
-      setError('Please fill all required fields (SKU, Item Name, Volume, Category, Organization)');
+    if (!form.sku || !form.itemName || !volumeValue || !volumeUnit || !form.categoryId || !form.organizationId) {
+      setError('Please fill all required fields (SKU, Item Name, Volume Value, Volume Unit, Category, Organization)');
       return false;
     }
     setError('');
@@ -138,6 +163,8 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
       setForm(initialState);
       setImage(null);
       setThumbnail(null);
+      setVolumeValue('');
+      setVolumeUnit('');
       setError('');
       onBack();
     } catch (error) {
@@ -189,7 +216,31 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
                 <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
                   <div style={{ flex: 1 }}>
                     <label>Volume of Measurement *</label>
-                    <input name="volumeOfMeasurement" value={form.volumeOfMeasurement} onChange={handleChange} required placeholder="e.g., 1kg, 500ml, 1 piece" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                      <input 
+                        name="volumeValue" 
+                        value={volumeValue} 
+                        onChange={handleVolumeValueChange} 
+                        required 
+                        placeholder="Enter value" 
+                        style={{ flex: 1, padding: 10, borderRadius: 6, border: '1px solid #ccc' }} 
+                      />
+                      <select 
+                        name="volumeUnit" 
+                        value={volumeUnit} 
+                        onChange={handleVolumeUnitChange} 
+                        required 
+                        style={{ flex: 1, padding: 10, borderRadius: 6, border: '1px solid #ccc' }}
+                      >
+                        <option value="">Select unit</option>
+                        <option value="kg">kg</option>
+                        <option value="gm">gm</option>
+                        <option value="piece">piece</option>
+                        <option value="pieces">pieces</option>
+                        <option value="ml">ml</option>
+                        <option value="l">l</option>
+                      </select>
+                    </div>
                   </div>
                   <div style={{ flex: 1 }}>
                     <label>Source of Origin</label>

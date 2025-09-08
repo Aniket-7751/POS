@@ -306,33 +306,39 @@ const POSInterface: React.FC = () => {
         {/* Customer Details */}
         <div style={{ marginBottom: '20px' }}>
           <h3 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: 'bold', color: '#333' }}>Customer Details (Optional)</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <input
-              type="text"
-              placeholder="Customer Name"
-              value={customerDetails.name || ''}
-              onChange={(e) => setCustomerDetails({...customerDetails, name: e.target.value})}
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '2px solid #e0e0e0',
-                borderRadius: '6px',
-                fontSize: '14px'
-              }}
-            />
-            <input
-              type="text"
-              placeholder="Phone Number"
-              value={customerDetails.phone || ''}
-              onChange={(e) => setCustomerDetails({...customerDetails, phone: e.target.value})}
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '2px solid #e0e0e0',
-                borderRadius: '6px',
-                fontSize: '14px'
-              }}
-            />
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch' }}>
+            <div style={{ flex: 1 }}>
+              <input
+                type="text"
+                placeholder="Customer Name"
+                value={customerDetails.name || ''}
+                onChange={(e) => setCustomerDetails({...customerDetails, name: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '2px solid #e0e0e0',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <input
+                type="text"
+                placeholder="Phone Number"
+                value={customerDetails.phone || ''}
+                onChange={(e) => setCustomerDetails({...customerDetails, phone: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '2px solid #e0e0e0',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
           </div>
         </div>
 
