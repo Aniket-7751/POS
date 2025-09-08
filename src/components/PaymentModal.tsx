@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
+import BillDisplaySimple from './BillDisplaySimple';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -9,7 +10,19 @@ interface PaymentModalProps {
   customerDetails?: {
     name?: string;
     phone?: string;
+    email?: string;
   };
+  cartItems?: Array<{
+    sku: string;
+    itemName: string;
+    quantity: number;
+    pricePerUnit: number;
+    gst: number;
+    discount: number;
+    totalAmount: number;
+  }>;
+  billData?: any;
+  showBill?: boolean;
 }
 
 const PaymentModal: React.FC<PaymentModalProps> = ({
@@ -17,10 +30,13 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   onClose,
   totalAmount,
   onPaymentComplete,
-  customerDetails
+  customerDetails,
+  cartItems = [],
+  billData,
+  showBill = false
 }) => {
-  const [selectedMethod, setSelectedMethod] = useState<'cash' | 'card' | 'upi'>('cash');
-  const [paymentStep, setPaymentStep] = useState<'method' | 'processing' | 'complete'>('method');
+  const [selectedMethod, setSelectedMethod] = useState<'cash' | 'card' | 'UPI'>('cash');
+  const [paymentStep, setPaymentStep] = useState<'method' | 'processing' | 'complete' | 'bill'>('method');
   const [upiQRCode, setUpiQRCode] = useState<string>('');
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [transactionId, setTransactionId] = useState<string>('');
@@ -35,10 +51,17 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
   // Generate UPI QR Code
   useEffect(() => {
-    if (selectedMethod === 'upi' && totalAmount > 0) {
+    if (selectedMethod === 'UPI' && totalAmount > 0) {
       generateUPIQRCode();
     }
   }, [selectedMethod, totalAmount]);
+
+  // Handle bill display when bill data is provided
+  useEffect(() => {
+    if (showBill && billData && paymentStep === 'complete') {
+      setPaymentStep('bill');
+    }
+  }, [showBill, billData, paymentStep]);
 
   const generateUPIQRCode = async () => {
     try {
@@ -62,7 +85,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     }
   };
 
-  const handlePaymentMethodSelect = (method: 'cash' | 'card' | 'upi') => {
+  const handlePaymentMethodSelect = (method: 'cash' | 'card' | 'UPI') => {
     setSelectedMethod(method);
     setPaymentStep('processing');
   };
@@ -71,40 +94,46 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     setPaymentCompleted(true);
     setPaymentStep('complete');
     
-    // Simulate payment processing delay
-    setTimeout(() => {
-      onPaymentComplete(selectedMethod, transactionId);
-      onClose();
-    }, 2000);
+    // Call the parent callback to handle transaction creation and bill generation
+    onPaymentComplete(selectedMethod, transactionId);
   };
 
   const handleClose = () => {
-    if (paymentStep === 'complete') {
-      onClose();
-    } else {
-      // Reset state when closing
-      setPaymentStep('method');
-      setPaymentCompleted(false);
-      setUpiQRCode('');
-      onClose();
-    }
+    // Reset state when closing
+    setPaymentStep('method');
+    setPaymentCompleted(false);
+    setUpiQRCode('');
+    onClose();
+  };
+
+  const handleBillClose = () => {
+    handleClose();
   };
 
   if (!isOpen) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000
-    }}>
+    <>
+      <style>
+        {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000
+      }}>
       <div style={{
         backgroundColor: 'white',
         borderRadius: '12px',
@@ -239,7 +268,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               </button>
 
               <button
-                onClick={() => handlePaymentMethodSelect('upi')}
+                onClick={() => handlePaymentMethodSelect('UPI')}
                 style={{
                   padding: '16px',
                   border: '2px solid #e0e0e0',
@@ -280,10 +309,10 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
             <h3 style={{ marginBottom: '20px', color: '#333' }}>
               {selectedMethod === 'cash' && 'Cash Payment'}
               {selectedMethod === 'card' && 'Card Payment'}
-              {selectedMethod === 'upi' && 'UPI Payment'}
+              {selectedMethod === 'UPI' && 'UPI Payment'}
             </h3>
 
-            {selectedMethod === 'upi' && upiQRCode && (
+            {selectedMethod === 'UPI' && upiQRCode && (
               <div style={{ marginBottom: '20px' }}>
                 <div style={{ marginBottom: '12px', fontSize: '16px', fontWeight: '600' }}>
                   Scan QR Code with UPI App
@@ -355,10 +384,30 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
             <div style={{ fontSize: '14px', color: '#666' }}>
               Generating bill...
             </div>
+            <div style={{ marginTop: '16px' }}>
+              <div style={{ 
+                width: '40px', 
+                height: '40px', 
+                border: '4px solid #f3f3f3',
+                borderTop: '4px solid #e53e3e',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+                margin: '0 auto'
+              }}></div>
+            </div>
           </div>
+        )}
+
+        {/* Bill Display */}
+        {paymentStep === 'bill' && billData && (
+          <BillDisplaySimple 
+            billData={billData} 
+            onClose={handleBillClose}
+          />
         )}
       </div>
     </div>
+    </>
   );
 };
 

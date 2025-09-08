@@ -29,6 +29,8 @@ const POSInterface: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [billData, setBillData] = useState<any>(null);
+  const [showBill, setShowBill] = useState(false);
 
   // Load stores on component mount
   useEffect(() => {
@@ -192,6 +194,10 @@ const POSInterface: React.FC = () => {
       const billResponse = await billingAPI.generateBill({
         transactionId: transaction._id
       });
+
+      // Set bill data and show bill in modal
+      setBillData(billResponse.data);
+      setShowBill(true);
 
       setMessage(`Transaction completed! Bill No: ${billResponse.data.billNo}`);
       setCart([]);
@@ -528,10 +534,17 @@ const POSInterface: React.FC = () => {
       {/* Payment Modal */}
       <PaymentModal
         isOpen={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setShowBill(false);
+          setBillData(null);
+        }}
         totalAmount={grandTotal}
         onPaymentComplete={handlePaymentComplete}
         customerDetails={customerDetails}
+        cartItems={cart}
+        billData={billData}
+        showBill={showBill}
       />
     </div>
   );
