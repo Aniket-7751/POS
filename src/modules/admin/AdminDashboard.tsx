@@ -70,20 +70,24 @@ const AdminDashboard: React.FC = () => {
     <div style={{ 
       minHeight: '100vh', 
       background: '#f5f6fa', 
-      padding: '20px',
+      padding: '16px',
       fontFamily: 'Arial, sans-serif',
       width: '100%',
-      maxWidth: '100%'
+      maxWidth: '100%',
+      boxSizing: 'border-box',
+      overflowX: 'hidden'
     }}>
       {/* Header */}
       <div style={{ 
-        marginBottom: '30px',
+        marginBottom: '24px',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '12px'
       }}>
         <h1 style={{ 
-          fontSize: '28px', 
+          fontSize: '24px', 
           fontWeight: '700', 
           color: '#333',
           margin: 0
@@ -93,14 +97,15 @@ const AdminDashboard: React.FC = () => {
         <button
           onClick={fetchDashboardData}
           style={{
-            padding: '10px 20px',
+            padding: '8px 16px',
             background: '#6c3fc5',
             color: 'white',
             border: 'none',
-            borderRadius: '8px',
+            borderRadius: '6px',
             cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: '600'
+            fontSize: '13px',
+            fontWeight: '600',
+            whiteSpace: 'nowrap'
           }}
         >
           🔄 Refresh
@@ -110,19 +115,21 @@ const AdminDashboard: React.FC = () => {
       {/* Stats Cards */}
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-        gap: '15px',
-        marginBottom: '30px',
-        maxWidth: '100%'
+        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
+        gap: '12px',
+        marginBottom: '24px',
+        maxWidth: '100%',
+        boxSizing: 'border-box'
       }}>
         {/* Today Sales */}
         <div style={{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: 'white',
-          padding: '16px',
-          borderRadius: '12px',
+          padding: '14px',
+          borderRadius: '10px',
           boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          minHeight: '100px'
+          minHeight: '90px',
+          boxSizing: 'border-box'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
@@ -139,10 +146,11 @@ const AdminDashboard: React.FC = () => {
         <div style={{
           background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
           color: 'white',
-          padding: '16px',
-          borderRadius: '12px',
+          padding: '14px',
+          borderRadius: '10px',
           boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          minHeight: '100px'
+          minHeight: '90px',
+          boxSizing: 'border-box'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
@@ -159,10 +167,11 @@ const AdminDashboard: React.FC = () => {
         <div style={{
           background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
           color: 'white',
-          padding: '16px',
-          borderRadius: '12px',
+          padding: '14px',
+          borderRadius: '10px',
           boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          minHeight: '100px'
+          minHeight: '90px',
+          boxSizing: 'border-box'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
@@ -179,10 +188,11 @@ const AdminDashboard: React.FC = () => {
         <div style={{
           background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
           color: 'white',
-          padding: '16px',
-          borderRadius: '12px',
+          padding: '14px',
+          borderRadius: '10px',
           boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          minHeight: '100px'
+          minHeight: '90px',
+          boxSizing: 'border-box'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
@@ -199,10 +209,11 @@ const AdminDashboard: React.FC = () => {
         <div style={{
           background: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
           color: '#333',
-          padding: '16px',
-          borderRadius: '12px',
+          padding: '14px',
+          borderRadius: '10px',
           boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          minHeight: '100px'
+          minHeight: '90px',
+          boxSizing: 'border-box'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
@@ -219,23 +230,27 @@ const AdminDashboard: React.FC = () => {
       {/* Main Content Area */}
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: '1fr 1fr', 
-        gap: '20px',
-        marginBottom: '20px',
-        maxWidth: '100%'
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+        gap: '16px',
+        marginBottom: '16px',
+        maxWidth: '100%',
+        boxSizing: 'border-box'
       }}>
         {/* Monthly Sales Panel */}
         <div style={{
           background: 'white',
-          borderRadius: '12px',
-          padding: '20px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          borderRadius: '10px',
+          padding: '16px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          boxSizing: 'border-box'
         }}>
           <div style={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
             alignItems: 'center',
-            marginBottom: '20px'
+            marginBottom: '16px',
+            flexWrap: 'wrap',
+            gap: '8px'
           }}>
             <h3 style={{ 
               fontSize: '18px', 
@@ -245,46 +260,50 @@ const AdminDashboard: React.FC = () => {
             }}>
               Monthly Sales
             </h3>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               <button style={{
-                padding: '6px 12px',
+                padding: '4px 8px',
                 background: '#f8f9fa',
                 border: '1px solid #e9ecef',
-                borderRadius: '6px',
+                borderRadius: '4px',
                 cursor: 'pointer',
-                fontSize: '12px'
+                fontSize: '11px',
+                whiteSpace: 'nowrap'
               }}>
-                🔄 Refresh
+                🔄
               </button>
               <button style={{
-                padding: '6px 12px',
+                padding: '4px 8px',
                 background: '#f8f9fa',
                 border: '1px solid #e9ecef',
-                borderRadius: '6px',
+                borderRadius: '4px',
                 cursor: 'pointer',
-                fontSize: '12px'
+                fontSize: '11px',
+                whiteSpace: 'nowrap'
               }}>
-                📊 Chart
+                📊
               </button>
               <button style={{
-                padding: '6px 12px',
+                padding: '4px 8px',
                 background: '#f8f9fa',
                 border: '1px solid #e9ecef',
-                borderRadius: '6px',
+                borderRadius: '4px',
                 cursor: 'pointer',
-                fontSize: '12px'
+                fontSize: '11px',
+                whiteSpace: 'nowrap'
               }}>
-                📋 Table
+                📋
               </button>
               <button style={{
-                padding: '6px 12px',
+                padding: '4px 8px',
                 background: '#f8f9fa',
                 border: '1px solid #e9ecef',
-                borderRadius: '6px',
+                borderRadius: '4px',
                 cursor: 'pointer',
-                fontSize: '12px'
+                fontSize: '11px',
+                whiteSpace: 'nowrap'
               }}>
-                🔽 Sort
+                🔽
               </button>
             </div>
           </div>
@@ -305,15 +324,18 @@ const AdminDashboard: React.FC = () => {
         {/* Monthly Profit Panel */}
         <div style={{
           background: 'white',
-          borderRadius: '12px',
-          padding: '20px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          borderRadius: '10px',
+          padding: '16px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          boxSizing: 'border-box'
         }}>
           <div style={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
             alignItems: 'center',
-            marginBottom: '20px'
+            marginBottom: '16px',
+            flexWrap: 'wrap',
+            gap: '8px'
           }}>
             <h3 style={{ 
               fontSize: '18px', 
@@ -323,46 +345,50 @@ const AdminDashboard: React.FC = () => {
             }}>
               Monthly Profit
             </h3>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               <button style={{
-                padding: '6px 12px',
+                padding: '4px 8px',
                 background: '#f8f9fa',
                 border: '1px solid #e9ecef',
-                borderRadius: '6px',
+                borderRadius: '4px',
                 cursor: 'pointer',
-                fontSize: '12px'
+                fontSize: '11px',
+                whiteSpace: 'nowrap'
               }}>
-                🔄 Refresh
+                🔄
               </button>
               <button style={{
-                padding: '6px 12px',
+                padding: '4px 8px',
                 background: '#f8f9fa',
                 border: '1px solid #e9ecef',
-                borderRadius: '6px',
+                borderRadius: '4px',
                 cursor: 'pointer',
-                fontSize: '12px'
+                fontSize: '11px',
+                whiteSpace: 'nowrap'
               }}>
-                📊 Chart
+                📊
               </button>
               <button style={{
-                padding: '6px 12px',
+                padding: '4px 8px',
                 background: '#f8f9fa',
                 border: '1px solid #e9ecef',
-                borderRadius: '6px',
+                borderRadius: '4px',
                 cursor: 'pointer',
-                fontSize: '12px'
+                fontSize: '11px',
+                whiteSpace: 'nowrap'
               }}>
-                📋 Table
+                📋
               </button>
               <button style={{
-                padding: '6px 12px',
+                padding: '4px 8px',
                 background: '#f8f9fa',
                 border: '1px solid #e9ecef',
-                borderRadius: '6px',
+                borderRadius: '4px',
                 cursor: 'pointer',
-                fontSize: '12px'
+                fontSize: '11px',
+                whiteSpace: 'nowrap'
               }}>
-                🔽 Sort
+                🔽
               </button>
             </div>
           </div>
@@ -384,15 +410,18 @@ const AdminDashboard: React.FC = () => {
       {/* Most Sold Products Panel */}
       <div style={{
         background: 'white',
-        borderRadius: '12px',
-        padding: '20px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        borderRadius: '10px',
+        padding: '16px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        boxSizing: 'border-box'
       }}>
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center',
-          marginBottom: '20px'
+          marginBottom: '16px',
+          flexWrap: 'wrap',
+          gap: '8px'
         }}>
           <h3 style={{ 
             fontSize: '18px', 
@@ -402,46 +431,50 @@ const AdminDashboard: React.FC = () => {
           }}>
             Most Sold Products
           </h3>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             <button style={{
-              padding: '6px 12px',
+              padding: '4px 8px',
               background: '#f8f9fa',
               border: '1px solid #e9ecef',
-              borderRadius: '6px',
+              borderRadius: '4px',
               cursor: 'pointer',
-              fontSize: '12px'
+              fontSize: '11px',
+              whiteSpace: 'nowrap'
             }}>
-              🔄 Refresh
+              🔄
             </button>
             <button style={{
-              padding: '6px 12px',
+              padding: '4px 8px',
               background: '#f8f9fa',
               border: '1px solid #e9ecef',
-              borderRadius: '6px',
+              borderRadius: '4px',
               cursor: 'pointer',
-              fontSize: '12px'
+              fontSize: '11px',
+              whiteSpace: 'nowrap'
             }}>
-              📊 Chart
+              📊
             </button>
             <button style={{
-              padding: '6px 12px',
+              padding: '4px 8px',
               background: '#f8f9fa',
               border: '1px solid #e9ecef',
-              borderRadius: '6px',
+              borderRadius: '4px',
               cursor: 'pointer',
-              fontSize: '12px'
+              fontSize: '11px',
+              whiteSpace: 'nowrap'
             }}>
-              📋 Table
+              📋
             </button>
             <button style={{
-              padding: '6px 12px',
+              padding: '4px 8px',
               background: '#f8f9fa',
               border: '1px solid #e9ecef',
-              borderRadius: '6px',
+              borderRadius: '4px',
               cursor: 'pointer',
-              fontSize: '12px'
+              fontSize: '11px',
+              whiteSpace: 'nowrap'
             }}>
-              🔽 Sort
+              🔽
             </button>
           </div>
         </div>
