@@ -1,8 +1,21 @@
 const Catalogue = require('../models/Catalogue');
+const path = require('path');
 
 exports.createCatalogue = async (req, res) => {
   try {
-    const catalogue = new Catalogue(req.body);
+    const catalogueData = { ...req.body };
+    
+    // Handle image uploads if files are present
+    if (req.files) {
+      if (req.files.image) {
+        catalogueData.image = `/uploads/${req.files.image[0].filename}`;
+      }
+      if (req.files.thumbnail) {
+        catalogueData.thumbnail = `/uploads/${req.files.thumbnail[0].filename}`;
+      }
+    }
+    
+    const catalogue = new Catalogue(catalogueData);
     await catalogue.save();
     res.status(201).json(catalogue);
   } catch (err) {
@@ -31,7 +44,19 @@ exports.getCatalogueById = async (req, res) => {
 
 exports.updateCatalogueById = async (req, res) => {
   try {
-    const catalogue = await Catalogue.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const catalogueData = { ...req.body };
+    
+    // Handle image uploads if files are present
+    if (req.files) {
+      if (req.files.image) {
+        catalogueData.image = `/uploads/${req.files.image[0].filename}`;
+      }
+      if (req.files.thumbnail) {
+        catalogueData.thumbnail = `/uploads/${req.files.thumbnail[0].filename}`;
+      }
+    }
+    
+    const catalogue = await Catalogue.findByIdAndUpdate(req.params.id, catalogueData, { new: true });
     if (!catalogue) return res.status(404).json({ error: 'Not found' });
     res.json(catalogue);
   } catch (err) {

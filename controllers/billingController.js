@@ -97,3 +97,4 @@ function generateUPIQR(organization, amount) {
   // For now, returning a mock URL
   return `https://upiqr.in/pay?pa=${organization.gstNumber}@paytm&pn=${organization.organizationName}&am=${amount}&cu=INR`;
 }
+

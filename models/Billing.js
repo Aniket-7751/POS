@@ -26,3 +26,4 @@ const billingSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 module.exports = mongoose.model('Billing', billingSchema);
+
