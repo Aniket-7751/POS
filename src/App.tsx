@@ -11,8 +11,9 @@ import StoreModule from './modules/store/StoreModule';
 import CategoryModule from './modules/inventory/category/CategoryModule';
 import CatalogueModule from './modules/inventory/catalogue/CatalogueModule';
 import AdminDashboard from './modules/admin/AdminDashboard';
+import SalesModule from './modules/sales/SalesModule';
 
-type Page = 'admin' | 'pos' | 'organization' | 'store' | 'inventory' | 'category' | 'catalogue';
+type Page = 'admin' | 'pos' | 'organization' | 'store' | 'inventory' | 'category' | 'catalogue' | 'sales';
 
 interface User {
   id: string;
@@ -280,11 +281,11 @@ function App() {
 
           {/* POS Interface */}
           <div style={{ 
-            padding: '0 20px 20px 20px'
+            padding: '0 20px 10px 20px'
           }}>
             <button style={{ 
               width: '100%', 
-              margin: '0', 
+              margin: '0 0 8px 0', 
               padding: '12px 16px', 
               background: page==='pos' ? '#e53e3e' : 'transparent', 
               color: page==='pos' ? '#fff' : '#ccc', 
@@ -301,6 +302,26 @@ function App() {
             }} onClick={() => setPage('pos')}>
               <span style={{ fontSize: '16px' }}>🛒</span>
               POS Interface
+            </button>
+            <button style={{ 
+              width: '100%', 
+              margin: '0', 
+              padding: '12px 16px', 
+              background: page==='sales' ? '#e53e3e' : 'transparent', 
+              color: page==='sales' ? '#fff' : '#ccc', 
+              border: 'none', 
+              borderRadius: '8px', 
+              fontSize: '14px', 
+              fontWeight: '500', 
+              cursor: 'pointer', 
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              textAlign: 'left'
+            }} onClick={() => setPage('sales')}>
+              <span style={{ fontSize: '16px' }}>📊</span>
+              My Sales
             </button>
           </div>
         </div>
@@ -407,6 +428,7 @@ function App() {
         {page === 'store' && <StoreModule />}
         {page === 'category' && <CategoryModule />}
         {page === 'catalogue' && <CatalogueModule />}
+        {page === 'sales' && <SalesModule />}
       </main>
     </div>
   );

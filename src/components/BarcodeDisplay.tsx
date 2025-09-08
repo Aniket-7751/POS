@@ -75,3 +75,4 @@ const BarcodeDisplay: React.FC<BarcodeDisplayProps> = ({
 };
 
 export default BarcodeDisplay;
+

@@ -176,22 +176,22 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
         payload.thumbnail = await fileToBase64(thumbnail);
       }
 
-      if (editId) {
+    if (editId) {
         console.log('Updating catalogue with base64 (if provided)...');
         await updateCatalogue(editId, payload);
-      } else {
+    } else {
         console.log('Creating catalogue with base64 (if provided)...');
         await createCatalogue(payload);
-      }
+    }
       
       console.log('Catalogue saved successfully, calling onBack...');
-      setForm(initialState);
+    setForm(initialState);
       setImage(null);
       setThumbnail(null);
       setVolumeValue('');
       setVolumeUnit('');
       setError('');
-      onBack();
+    onBack();
     } catch (error) {
       console.error('Error saving catalogue:', error);
       setError('Failed to save catalogue. Please try again.');

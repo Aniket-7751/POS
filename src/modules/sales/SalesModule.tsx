@@ -1,0 +1,434 @@
+import React, { useState, useEffect } from 'react';
+import salesAPI, { Sale } from './salesApi';
+
+const SalesModule: React.FC = () => {
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [filter, setFilter] = useState<'all' | 'today' | 'cash' | 'card' | 'UPI'>('all');
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+
+  useEffect(() => {
+    fetchSales();
+  }, [filter]);
+
+  const fetchSales = async () => {
+    try {
+      setLoading(true);
+      let response;
+      
+      switch (filter) {
+        case 'today':
+          response = await salesAPI.getTodaysSales();
+          break;
+        case 'cash':
+        case 'card':
+        case 'UPI':
+          response = await salesAPI.getByPaymentMethod(filter);
+          break;
+        default:
+          response = await salesAPI.getAll();
+      }
+      
+      // Ensure we have valid data and add default values for missing properties
+      const salesData = Array.isArray(response.data) ? response.data.map(sale => ({
+        ...sale,
+        customerDetails: sale.customerDetails || {},
+        items: sale.items || [],
+        paymentMethod: sale.paymentMethod || 'cash',
+        grandTotal: sale.grandTotal || 0,
+        subTotal: sale.subTotal || 0,
+        gstTotal: sale.gstTotal || 0,
+        discountTotal: sale.discountTotal || 0
+      })) : [];
+      
+      setSales(salesData);
+      setError('');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to fetch sales');
+      console.error('Error fetching sales:', err);
+      setSales([]); // Set empty array on error
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR'
+    }).format(amount);
+  };
+
+  const formatDateTime = (dateTime: string) => {
+    if (!dateTime) return 'N/A';
+    try {
+      return new Date(dateTime).toLocaleString('en-IN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
+  const getPaymentMethodIcon = (method: string) => {
+    switch (method) {
+      case 'cash': return '💵';
+      case 'card': return '💳';
+      case 'UPI': return '📱';
+      default: return '💰';
+    }
+  };
+
+  const getPaymentMethodColor = (method: string) => {
+    switch (method) {
+      case 'cash': return '#38a169';
+      case 'card': return '#3182ce';
+      case 'UPI': return '#805ad5';
+      default: return '#718096';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ 
+        minHeight: '100vh', 
+        background: '#f8f9fb', 
+        padding: 32,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{ 
+          textAlign: 'center',
+          color: '#666'
+        }}>
+          <div style={{ fontSize: '24px', marginBottom: '16px' }}>⏳</div>
+          <div>Loading sales data...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ 
+        minHeight: '100vh', 
+        background: '#f8f9fb', 
+        padding: 32,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{ 
+          textAlign: 'center',
+          color: '#e53e3e'
+        }}>
+          <div style={{ fontSize: '24px', marginBottom: '16px' }}>❌</div>
+          <div>{error}</div>
+          <button 
+            onClick={fetchSales}
+            style={{
+              marginTop: '16px',
+              padding: '8px 16px',
+              background: '#e53e3e',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#f8f9fb', padding: 32 }}>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        marginBottom: 32 
+      }}>
+        <div>
+          <h1 style={{ fontWeight: 700, fontSize: 32, marginBottom: 8, color: '#1a1a1a' }}>
+            My Sales
+          </h1>
+          <div style={{ color: '#6c6c6c', fontSize: 16 }}>
+            View and manage all completed sales transactions
+          </div>
+        </div>
+        
+        <div style={{ 
+          display: 'flex', 
+          gap: 12,
+          alignItems: 'center'
+        }}>
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as any)}
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              background: 'white',
+              fontSize: '14px',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="all">All Sales</option>
+            <option value="today">Today's Sales</option>
+            <option value="cash">Cash Payments</option>
+            <option value="card">Card Payments</option>
+            <option value="UPI">UPI Payments</option>
+          </select>
+          
+          <button
+            onClick={fetchSales}
+            style={{
+              padding: '8px 16px',
+              background: '#e53e3e',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            🔄 Refresh
+          </button>
+        </div>
+      </div>
+
+      {sales.length === 0 ? (
+        <div style={{
+          textAlign: 'center',
+          padding: '60px 20px',
+          background: 'white',
+          borderRadius: '12px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>📊</div>
+          <h3 style={{ color: '#666', marginBottom: '8px' }}>No sales found</h3>
+          <p style={{ color: '#999' }}>
+            {filter === 'today' ? "No sales completed today" : "No sales available for the selected filter"}
+          </p>
+        </div>
+      ) : (
+        <div style={{
+          background: 'white',
+          borderRadius: '12px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr',
+            background: '#f8f9fa',
+            padding: '16px 20px',
+            borderBottom: '1px solid #e9ecef',
+            fontWeight: '600',
+            fontSize: '14px',
+            color: '#495057'
+          }}>
+            <div>Transaction ID</div>
+            <div>Date & Time</div>
+            <div>Items</div>
+            <div>Payment Method</div>
+            <div>Customer</div>
+            <div>Total Amount</div>
+          </div>
+          
+          {sales.map((sale) => (
+            <div
+              key={sale._id}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr',
+                padding: '16px 20px',
+                borderBottom: '1px solid #f1f3f4',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s'
+              }}
+              onClick={() => setSelectedSale(sale)}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#f8f9fa';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'white';
+              }}
+            >
+              <div style={{ fontWeight: '500', color: '#e53e3e' }}>
+                {sale.transactionId || 'N/A'}
+              </div>
+              <div style={{ color: '#666', fontSize: '13px' }}>
+                {formatDateTime(sale.dateTime || '')}
+              </div>
+              <div style={{ color: '#666' }}>
+                {(sale.items || []).length} item{(sale.items || []).length !== 1 ? 's' : ''}
+              </div>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '6px',
+                color: getPaymentMethodColor(sale.paymentMethod || 'cash')
+              }}>
+                <span>{getPaymentMethodIcon(sale.paymentMethod || 'cash')}</span>
+                <span style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: '500' }}>
+                  {sale.paymentMethod || 'cash'}
+                </span>
+              </div>
+              <div style={{ color: '#666', fontSize: '13px' }}>
+                {sale.customerDetails?.name || 'Walk-in Customer'}
+              </div>
+              <div style={{ fontWeight: '600', color: '#38a169' }}>
+                {formatCurrency(sale.grandTotal || 0)}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Sale Details Modal */}
+      {selectedSale && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            maxWidth: '600px',
+            width: '100%',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.3)'
+          }}>
+            <div style={{
+              padding: '24px',
+              borderBottom: '1px solid #e9ecef',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ margin: 0, color: '#1a1a1a' }}>
+                Sale Details - {selectedSale.transactionId || 'N/A'}
+              </h2>
+              <button
+                onClick={() => setSelectedSale(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#666'
+                }}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div style={{ padding: '24px' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <h3 style={{ margin: '0 0 12px 0', color: '#495057' }}>Transaction Info</h3>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: '1fr 1fr', 
+                  gap: '12px',
+                  fontSize: '14px'
+                }}>
+                  <div><strong>Date:</strong> {formatDateTime(selectedSale.dateTime || '')}</div>
+                  <div><strong>Payment:</strong> {getPaymentMethodIcon(selectedSale.paymentMethod || 'cash')} {(selectedSale.paymentMethod || 'cash').toUpperCase()}</div>
+                  <div><strong>Sub Total:</strong> {formatCurrency(selectedSale.subTotal || 0)}</div>
+                  <div><strong>GST:</strong> {formatCurrency(selectedSale.gstTotal || 0)}</div>
+                  <div><strong>Discount:</strong> {formatCurrency(selectedSale.discountTotal || 0)}</div>
+                  <div><strong>Grand Total:</strong> {formatCurrency(selectedSale.grandTotal || 0)}</div>
+                </div>
+              </div>
+
+              {selectedSale.customerDetails?.name && (
+                <div style={{ marginBottom: '20px' }}>
+                  <h3 style={{ margin: '0 0 12px 0', color: '#495057' }}>Customer Details</h3>
+                  <div style={{ fontSize: '14px' }}>
+                    <div><strong>Name:</strong> {selectedSale.customerDetails.name}</div>
+                    {selectedSale.customerDetails.phone && (
+                      <div><strong>Phone:</strong> {selectedSale.customerDetails.phone}</div>
+                    )}
+                    {selectedSale.customerDetails.email && (
+                      <div><strong>Email:</strong> {selectedSale.customerDetails.email}</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <h3 style={{ margin: '0 0 12px 0', color: '#495057' }}>Items Sold</h3>
+                <div style={{
+                  border: '1px solid #e9ecef',
+                  borderRadius: '8px',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
+                    background: '#f8f9fa',
+                    padding: '12px 16px',
+                    fontWeight: '600',
+                    fontSize: '14px',
+                    color: '#495057'
+                  }}>
+                    <div>Item</div>
+                    <div>Qty</div>
+                    <div>Price</div>
+                    <div>GST</div>
+                    <div>Total</div>
+                  </div>
+                  {(selectedSale.items || []).map((item, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
+                        padding: '12px 16px',
+                        borderBottom: index < (selectedSale.items || []).length - 1 ? '1px solid #f1f3f4' : 'none',
+                        fontSize: '14px'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: '500' }}>{item.itemName || 'Unknown Item'}</div>
+                        <div style={{ fontSize: '12px', color: '#666' }}>SKU: {item.sku || 'N/A'}</div>
+                      </div>
+                      <div>{item.quantity || 0}</div>
+                      <div>{formatCurrency(item.pricePerUnit || 0)}</div>
+                      <div>{formatCurrency(item.gst || 0)}</div>
+                      <div style={{ fontWeight: '500' }}>{formatCurrency(item.totalAmount || 0)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default SalesModule;

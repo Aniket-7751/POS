@@ -72,6 +72,13 @@ export const salesAPI = {
   createTransaction: (data: any) => api.post('/sales/transaction', data),
   getTransactionById: (id: string) => api.get(`/sales/transaction/${id}`),
   getTransactionsByStore: (storeId: string) => api.get(`/sales/store/${storeId}`),
+  getByDateRange: (startDate: string, endDate: string) => api.get(`/sales/date-range?start=${startDate}&end=${endDate}`),
+  getByTransactionId: (transactionId: string) => api.get(`/sales/transaction-id/${transactionId}`),
+  getStats: () => api.get('/sales/stats'),
+  getTodaysSales: () => api.get('/sales/today'),
+  getByPaymentMethod: (paymentMethod: string) => api.get(`/sales/payment-method/${paymentMethod}`),
+  getProductBySKU: (sku: string) => api.get(`/sales/product/sku/${sku}`),
+  getProductByBarcode: (barcode: string) => api.get(`/sales/product/barcode/${barcode}`),
 };
 
 // Billing API
