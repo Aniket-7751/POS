@@ -6,8 +6,8 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   userType: { type: String, enum: ['organization', 'store'], required: true },
   role: { type: String, enum: ['admin', 'manager', 'cashier'], default: 'cashier' },
-  organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', required: function() { return this.userType === 'organization'; } },
-  storeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Store', required: function() { return this.userType === 'store'; } },
+  organizationId: { type: String, ref: 'Organization', required: function() { return this.userType === 'organization'; } },
+  storeId: { type: String, ref: 'Store', required: function() { return this.userType === 'store'; } },
   permissions: [{
     module: { type: String, enum: ['organization', 'store', 'inventory', 'pos', 'reports'] },
     actions: [{ type: String, enum: ['read', 'write', 'delete', 'manage'] }]

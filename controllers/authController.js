@@ -10,8 +10,7 @@ exports.organizationLogin = async (req, res) => {
     const { email, password } = req.body;
 
     // Find organization user by email
-    const user = await User.findOne({ email, userType: 'organization' })
-      .populate('organizationId');
+    const user = await User.findOne({ email, userType: 'organization' });
     
     if (!user) {
       return res.status(401).json({ error: 'Invalid organization credentials' });
@@ -28,6 +27,9 @@ exports.organizationLogin = async (req, res) => {
       return res.status(401).json({ error: 'Account is inactive' });
     }
 
+    // Get organization details
+    const organization = await Organization.findById(user.organizationId);
+    
     // Generate JWT token
     const token = jwt.sign(
       { 
@@ -35,7 +37,7 @@ exports.organizationLogin = async (req, res) => {
         email: user.email, 
         userType: user.userType,
         role: user.role,
-        organizationId: user.organizationId._id
+        organizationId: user.organizationId
       },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
@@ -50,7 +52,7 @@ exports.organizationLogin = async (req, res) => {
         email: user.email,
         userType: user.userType,
         role: user.role,
-        organization: user.organizationId
+        organization: organization
       }
     });
   } catch (err) {
@@ -64,15 +66,7 @@ exports.storeLogin = async (req, res) => {
     const { email, password } = req.body;
 
     // Find store user by email
-    const user = await User.findOne({ email, userType: 'store' })
-      .populate('storeId')
-      .populate({
-        path: 'storeId',
-        populate: {
-          path: 'organizationId',
-          model: 'Organization'
-        }
-      });
+    const user = await User.findOne({ email, userType: 'store' });
     
     if (!user) {
       return res.status(401).json({ error: 'Invalid store credentials' });
@@ -89,6 +83,10 @@ exports.storeLogin = async (req, res) => {
       return res.status(401).json({ error: 'Account is inactive' });
     }
 
+    // Get store and organization details
+    const store = await Store.findById(user.storeId);
+    const organization = await Organization.findById(store.organizationId);
+
     // Generate JWT token
     const token = jwt.sign(
       { 
@@ -96,8 +94,8 @@ exports.storeLogin = async (req, res) => {
         email: user.email, 
         userType: user.userType,
         role: user.role,
-        storeId: user.storeId._id,
-        organizationId: user.storeId.organizationId._id
+        storeId: user.storeId,
+        organizationId: store.organizationId
       },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
@@ -112,8 +110,8 @@ exports.storeLogin = async (req, res) => {
         email: user.email,
         userType: user.userType,
         role: user.role,
-        store: user.storeId,
-        organization: user.storeId.organizationId
+        store: store,
+        organization: organization
       }
     });
   } catch (err) {

@@ -45,6 +45,7 @@ const seedData = async () => {
 
     // Create demo organization
     const organization = new Organization({
+      _id: 'ORG001',
       organizationId: 'ORG001',
       organizationName: 'Suguna Chicken',
       address: '123 Main Street, City, State 12345',
@@ -60,6 +61,7 @@ const seedData = async () => {
 
     // Create demo stores
     const mainStore = new Store({
+      _id: 'STORE001',
       storeId: 'STORE001',
       storeName: 'Suguna Chicken - Main Outlet',
       storeLocation: 'Downtown',
@@ -74,6 +76,7 @@ const seedData = async () => {
     await mainStore.save();
 
     const branchStore = new Store({
+      _id: 'STORE002',
       storeId: 'STORE002',
       storeName: 'Suguna Chicken - Branch Outlet',
       storeLocation: 'Uptown',
@@ -128,6 +131,7 @@ const seedData = async () => {
 
     // Create demo categories
     const category1 = new Category({
+      _id: 'CAT001',
       categoryId: 'CAT001',
       categoryName: 'Fresh Chicken',
       categoryDescription: 'Fresh whole chicken and chicken parts',
@@ -137,6 +141,7 @@ const seedData = async () => {
     await category1.save();
 
     const category2 = new Category({
+      _id: 'CAT002',
       categoryId: 'CAT002',
       categoryName: 'Frozen Chicken',
       categoryDescription: 'Frozen chicken products',
@@ -146,6 +151,7 @@ const seedData = async () => {
     await category2.save();
 
     const category3 = new Category({
+      _id: 'CAT003',
       categoryId: 'CAT003',
       categoryName: 'Chicken Products',
       categoryDescription: 'Processed chicken products and ready-to-cook items',
@@ -158,6 +164,7 @@ const seedData = async () => {
     // Create demo catalogue items
     const items = [
       {
+        _id: 'ITEM001',
         itemId: 'ITEM001',
         sku: 'SKU001',
         itemName: 'Whole Chicken - Fresh',
@@ -183,6 +190,7 @@ const seedData = async () => {
         organizationId: organization._id
       },
       {
+        _id: 'ITEM002',
         itemId: 'ITEM002',
         sku: 'SKU002',
         itemName: 'Chicken Breast - Frozen',
@@ -208,6 +216,7 @@ const seedData = async () => {
         organizationId: organization._id
       },
       {
+        _id: 'ITEM003',
         itemId: 'ITEM003',
         sku: 'SKU003',
         itemName: 'Chicken Legs - Fresh',
@@ -233,6 +242,7 @@ const seedData = async () => {
         organizationId: organization._id
       },
       {
+        _id: 'ITEM004',
         itemId: 'ITEM004',
         sku: 'SKU004',
         itemName: 'Chicken Wings - Frozen',
@@ -258,6 +268,7 @@ const seedData = async () => {
         organizationId: organization._id
       },
       {
+        _id: 'ITEM005',
         itemId: 'ITEM005',
         sku: 'SKU005',
         itemName: 'Chicken Sausages - Ready to Cook',
