@@ -41,9 +41,9 @@ export const buildFormData = (formData: any, imageFile?: File, thumbnailFile?: F
 // Helper to convert File to compressed base64 data URL (100KB max)
 export const fileToBase64 = async (file: File): Promise<string> => {
   try {
-    console.log(`Compressing image: ${file.name}, original size: ${(file.size / 1024).toFixed(2)}KB`);
+    // console.log(`Compressing image: ${file.name}, original size: ${(file.size / 1024).toFixed(2)}KB`);
     const compressedBase64 = await compressImage(file, 100);
-    console.log(`Compressed image size: ${(compressedBase64.length * 0.75 / 1024).toFixed(2)}KB`);
+    // console.log(`Compressed image size: ${(compressedBase64.length * 0.75 / 1024).toFixed(2)}KB`);
     return compressedBase64;
   } catch (error) {
     console.error('Error compressing image:', error);

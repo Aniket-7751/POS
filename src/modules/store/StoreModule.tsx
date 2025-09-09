@@ -62,7 +62,7 @@ const StoreModule: React.FC = () => {
           </thead>
           <tbody>
             {stores.map(store => {
-              console.log('Rendering store item:', store.storeName, 'image:', store.storePicture);
+              // console.log('Rendering store item:', store.storeName, 'image:', store.storePicture);
               const imageSource = store.storePicture && store.storePicture.startsWith('data:image') ? store.storePicture : `http://localhost:5000${store.storePicture}`;
               return (
                 <tr key={store._id} style={{ borderBottom: '1px solid #f0f0f0', fontSize: 15 }}>
@@ -80,7 +80,7 @@ const StoreModule: React.FC = () => {
                           border: '1px solid #ddd'
                         }}
                         onError={(e) => {
-                          console.log('Store image failed to load:', store.storePicture);
+                          // console.log('Store image failed to load:', store.storePicture);
                           e.currentTarget.style.display = 'none';
                         }}
                       />

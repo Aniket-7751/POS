@@ -14,11 +14,11 @@ const CatalogueModule: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const fetchCatalogues = async () => {
-    console.log('Fetching catalogues...');
+    // console.log('Fetching catalogues...');
     setLoading(true);
     try {
       const res = await getCatalogues();
-      console.log('Catalogues fetched:', res.data);
+      // console.log('Catalogues fetched:', res.data);
       setCatalogues(res.data as Catalogue[]);
     } catch (error) {
       console.error('Error fetching catalogues:', error);
@@ -44,7 +44,7 @@ const CatalogueModule: React.FC = () => {
 
   if (showAdd) {
     return <AddCataloguePage onBack={() => { 
-      console.log('AddCataloguePage onBack called'); 
+      // console.log('AddCataloguePage onBack called'); 
       setShowAdd(false); 
       // Add a small delay to ensure database is updated
       setTimeout(() => {
@@ -54,7 +54,7 @@ const CatalogueModule: React.FC = () => {
   }
   if (editId && editData) {
     return <AddCataloguePage onBack={() => { 
-      console.log('EditCataloguePage onBack called'); 
+      // console.log('EditCataloguePage onBack called'); 
       setEditId(null); 
       setEditData(null); 
       // Add a small delay to ensure database is updated
@@ -87,7 +87,7 @@ const CatalogueModule: React.FC = () => {
           </thead>
           <tbody>
             {catalogues.map(cat => {
-              console.log('Rendering catalogue item:', cat.itemName, 'thumbnail:', cat.thumbnail);
+              // console.log('Rendering catalogue item:', cat.itemName, 'thumbnail:', cat.thumbnail);
               return (
               <tr key={cat._id} style={{ borderBottom: '1px solid #f0f0f0', fontSize: 15 }}>
                 <td style={{ padding: 14 }}>
@@ -104,7 +104,7 @@ const CatalogueModule: React.FC = () => {
                         border: '1px solid #ddd' 
                       }}
                       onError={(e) => {
-                        console.log('Image failed to load:', cat.thumbnail);
+                        // console.log('Image failed to load:', cat.thumbnail);
                         e.currentTarget.style.display = 'none';
                       }}
                     />

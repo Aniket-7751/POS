@@ -44,14 +44,14 @@ interface InvoiceDisplayProps {
 const InvoiceDisplay: React.FC<InvoiceDisplayProps> = ({ invoiceData, onClose }) => {
   const invoiceRef = useRef<HTMLDivElement>(null);
 
-  // Debug logging
-  console.log('InvoiceDisplay received data:', {
-    storeName: invoiceData?.storeName,
-    storeAddress: invoiceData?.storeAddress,
-    organizationName: invoiceData?.organizationName,
-    gstNumber: invoiceData?.gstNumber,
-    phoneNumber: invoiceData?.phoneNumber
-  });
+  // // Debug logging
+  // console.log('InvoiceDisplay received data:', {
+  //   storeName: invoiceData?.storeName,
+  //   storeAddress: invoiceData?.storeAddress,
+  //   organizationName: invoiceData?.organizationName,
+  //   gstNumber: invoiceData?.gstNumber,
+  //   phoneNumber: invoiceData?.phoneNumber
+  // });
 
   // Safety check for invoiceData
   if (!invoiceData) {

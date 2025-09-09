@@ -57,14 +57,14 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      console.log('Store picture file selected:', file.name, file.size, file.type);
+      // console.log('Store picture file selected:', file.name, file.size, file.type);
       
       setStorePicture(file);
       
       try {
-        console.log(`Compressing store image: ${file.name}, original size: ${(file.size / 1024).toFixed(2)}KB`);
+        // console.log(`Compressing store image: ${file.name}, original size: ${(file.size / 1024).toFixed(2)}KB`);
         const compressedBase64 = await compressImage(file, 100);
-        console.log(`Compressed store image size: ${(compressedBase64.length * 0.75 / 1024).toFixed(2)}KB`);
+        // console.log(`Compressed store image size: ${(compressedBase64.length * 0.75 / 1024).toFixed(2)}KB`);
         setForm(prev => ({ ...prev, storePicture: compressedBase64 }));
       } catch (error) {
         console.error('Error compressing store image:', error);

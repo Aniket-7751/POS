@@ -41,14 +41,14 @@ const AddOrganizationPage: React.FC<AddOrganizationPageProps> = ({ onBack, editI
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      console.log('Logo file selected:', file.name, file.size, file.type);
+      // console.log('Logo file selected:', file.name, file.size, file.type);
       
       setLogoFile(file);
       
       try {
-        console.log(`Compressing logo: ${file.name}, original size: ${(file.size / 1024).toFixed(2)}KB`);
+        // console.log(`Compressing logo: ${file.name}, original size: ${(file.size / 1024).toFixed(2)}KB`);
         const compressedBase64 = await compressImage(file, 100);
-        console.log(`Compressed logo size: ${(compressedBase64.length * 0.75 / 1024).toFixed(2)}KB`);
+        // console.log(`Compressed logo size: ${(compressedBase64.length * 0.75 / 1024).toFixed(2)}KB`);
         setForm(prev => ({ ...prev, logo: compressedBase64 }));
       } catch (error) {
         console.error('Error compressing logo:', error);
@@ -83,17 +83,17 @@ const AddOrganizationPage: React.FC<AddOrganizationPageProps> = ({ onBack, editI
     e.preventDefault();
     if (!validate()) return;
     
-    console.log('Form submission started:', { editId, form });
+    // console.log('Form submission started:', { editId, form });
     
     try {
       if (editId) {
-        console.log('Calling updateOrganization API with:', { editId, form });
+        // console.log('Calling updateOrganization API with:', { editId, form });
         await updateOrganization(editId, form);
-        console.log('Update successful');
+        // console.log('Update successful');
       } else {
-        console.log('Calling createOrganization API with:', form);
+        // console.log('Calling createOrganization API with:', form);
         await createOrganization(form);
-        console.log('Create successful');
+        // console.log('Create successful');
       }
       setForm(initialState);
       setLogoFile(null);

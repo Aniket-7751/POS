@@ -100,7 +100,7 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
   // Generate barcode when SKU, price, or volume changes
   useEffect(() => {
     if (form.sku && form.price > 0 && volumeValue && volumeUnit) {
-      console.log('Generating barcode with data:', { sku: form.sku, price: form.price, weight: `${volumeValue}${volumeUnit}`, type: barcodeType });
+      // console.log('Generating barcode with data:', { sku: form.sku, price: form.price, weight: `${volumeValue}${volumeUnit}`, type: barcodeType });
       
       const barcodeData: BarcodeData = {
         sku: form.sku,
@@ -112,7 +112,7 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
         ? generateBarcodeNumber(barcodeData)
         : generateLongBarcodeNumber(barcodeData);
       
-      console.log('Generated barcode:', barcode);
+      // console.log('Generated barcode:', barcode);
       setGeneratedBarcode(barcode);
       setForm(prev => ({ ...prev, barcode }));
     }
@@ -139,7 +139,7 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'thumbnail') => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      console.log(`File selected for ${type}:`, file.name, file.size, file.type);
+      // console.log(`File selected for ${type}:`, file.name, file.size, file.type);
       if (type === 'image') setImage(file);
       else setThumbnail(file);
     }
@@ -196,7 +196,7 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
     if (!validateStep2()) return;
 
     try {
-      console.log('Submitting catalogue with files:', { image: !!image, thumbnail: !!thumbnail });
+      // console.log('Submitting catalogue with files:', { image: !!image, thumbnail: !!thumbnail });
 
       // Prefer base64 payload so it works across machines without shared disk
       let payload: any = { ...form };
@@ -212,14 +212,14 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
       }
 
     if (editId) {
-        console.log('Updating catalogue with base64 (if provided)...');
+        // console.log('Updating catalogue with base64 (if provided)...');
         await updateCatalogue(editId, payload);
     } else {
-        console.log('Creating catalogue with base64 (if provided)...');
+        // console.log('Creating catalogue with base64 (if provided)...');
         await createCatalogue(payload);
     }
       
-      console.log('Catalogue saved successfully, calling onBack...');
+      // console.log('Catalogue saved successfully, calling onBack...');
     setForm(initialState);
       setImage(null);
       setThumbnail(null);

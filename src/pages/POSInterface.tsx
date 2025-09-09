@@ -196,8 +196,8 @@ const POSInterface: React.FC = () => {
       });
 
       // Set invoice data and show invoice in modal
-      console.log('Invoice response from API:', invoiceResponse.data);
-      console.log('Invoice data being set:', invoiceResponse.data.invoice);
+      // console.log('Invoice response from API:', invoiceResponse.data);
+      // console.log('Invoice data being set:', invoiceResponse.data.invoice);
       setInvoiceData(invoiceResponse.data.invoice);
       setShowInvoice(true);
 
