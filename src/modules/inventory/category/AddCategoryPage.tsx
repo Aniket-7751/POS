@@ -20,19 +20,22 @@ const AddCategoryPage: React.FC<AddCategoryPageProps> = ({ onBack, editId, editD
     organizationId: ''
   });
   const [error, setError] = useState('');
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-
+  const [fieldErrors, setFieldErrors] = useState<{ categoryName: string; categoryId: string }>({
+    categoryName: '',
+    categoryId: '',
+  });
   useEffect(() => {
     if (editData) {
       setForm(editData);
     }
   }, [editData]);
 
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   useEffect(() => {
     const fetchOrganizations = async () => {
       try {
         const res = await getOrganizations();
-        setOrganizations(res.data);
+  setOrganizations(res.data as Organization[]);
       } catch (error) {
         console.error('Error fetching organizations:', error);
       }
@@ -40,15 +43,44 @@ const AddCategoryPage: React.FC<AddCategoryPageProps> = ({ onBack, editId, editD
     fetchOrganizations();
   }, []);
 
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
+    let newValue = value;
+    let errorMsg = '';
+    if (name === 'categoryId') {
+      if (/[^a-zA-Z0-9]/.test(value)) {
+        errorMsg = 'Special characters not allowed';
+        newValue = value.replace(/[^a-zA-Z0-9]/g, '');
+      }
+    }
+    if (name === 'categoryName') {
+      if (/[^a-zA-Z\s]/.test(value)) {
+        errorMsg = 'Only alphabets allowed';
+        newValue = value.replace(/[^a-zA-Z\s]/g, '');
+      }
+    }
+    setForm({ ...form, [name]: newValue });
+    if (name === 'categoryName') {
+      setFieldErrors(prev => ({ ...prev, categoryName: errorMsg }));
+    }
+    if (name === 'categoryId') {
+      setFieldErrors(prev => ({ ...prev, categoryId: errorMsg }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.categoryId || !form.categoryName || !form.organizationId) {
       setError('Category ID, Name, and Organization are required');
+      return;
+    }
+    if (!/^[a-zA-Z0-9]+$/.test(form.categoryId)) {
+      setFieldErrors(prev => ({ ...prev, categoryId: 'Special characters not allowed' }));
+      return;
+    }
+    if (!/^[a-zA-Z\s]+$/.test(form.categoryName)) {
+      setFieldErrors(prev => ({ ...prev, categoryName: 'Only alphabets allowed' }));
       return;
     }
     if (editId) {
@@ -73,12 +105,14 @@ const AddCategoryPage: React.FC<AddCategoryPageProps> = ({ onBack, editId, editD
             <div style={{ fontWeight: 700, fontSize: 22, marginBottom: 24 }}>Category Information</div>
             <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
               <div style={{ flex: 1 }}>
-                <label style={{ fontWeight: 500 }}>Category ID *</label>
+                <label style={{ fontWeight: 500 }}>Category ID <span style={{ color: 'red' }}>*</span></label>
                 <input name="categoryId" placeholder="Enter category ID" value={form.categoryId} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                {fieldErrors.categoryId && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.categoryId}</div>}
               </div>
               <div style={{ flex: 1 }}>
-                <label style={{ fontWeight: 500 }}>Category Name *</label>
+                <label style={{ fontWeight: 500 }}>Category Name <span style={{ color: 'red' }}>*</span></label>
                 <input name="categoryName" placeholder="Enter category name" value={form.categoryName} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                {fieldErrors.categoryName && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.categoryName}</div>}
               </div>
             </div>
             <div style={{ marginBottom: 16 }}>
@@ -87,17 +121,17 @@ const AddCategoryPage: React.FC<AddCategoryPageProps> = ({ onBack, editId, editD
             </div>
             <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
               <div style={{ flex: 1 }}>
-                <label style={{ fontWeight: 500 }}>Status *</label>
+                <label style={{ fontWeight: 500 }}>Status <span style={{ color: 'red' }}>*</span></label>
                 <select name="status" value={form.status} onChange={handleChange} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}>
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                 </select>
               </div>
               <div style={{ flex: 1 }}>
-                <label style={{ fontWeight: 500 }}>Organization *</label>
+                <label style={{ fontWeight: 500 }}>Organization <span style={{ color: 'red' }}>*</span></label>
                 <select name="organizationId" value={form.organizationId} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}>
                   <option value="">Select an organization</option>
-                  {organizations.map(org => (
+                  {organizations.map((org: Organization) => (
                     <option key={org._id} value={org._id}>
                       {org.organizationName} ({org.organizationId})
                     </option>

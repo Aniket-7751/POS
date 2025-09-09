@@ -25,6 +25,13 @@ interface AddOrganizationPageProps {
 const AddOrganizationPage: React.FC<AddOrganizationPageProps> = ({ onBack, editId, editData }) => {
   const [form, setForm] = useState<Organization>(initialState);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({
+    contactNumber: '',
+    contactPersonName: '',
+    panNumber: '',
+    gstNumber: '',
+    email: '',
+  });
   const [logoFile, setLogoFile] = useState<File | null>(null);
 
   useEffect(() => {
@@ -35,20 +42,68 @@ const AddOrganizationPage: React.FC<AddOrganizationPageProps> = ({ onBack, editI
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setForm({ ...form, [name]: name === 'contactNumber' ? value.slice(0, 10) : value });
+    let newValue = value;
+    let errorMsg = '';
+
+    if (name === 'organizationId') {
+      // Only allow alphanumeric (no special characters)
+      if (/[^a-zA-Z0-9]/.test(value)) {
+        errorMsg = 'Special characters not allowed';
+        newValue = value.replace(/[^a-zA-Z0-9]/g, '');
+      }
+    }
+    if (name === 'contactNumber') {
+      // Only allow digits, max 10
+      if (/[^0-9]/.test(value)) {
+        errorMsg = 'Only integers allowed';
+        newValue = value.replace(/[^0-9]/g, '');
+      }
+      newValue = newValue.slice(0, 10);
+    }
+    if (name === 'contactPersonName') {
+      // Only allow alphabets and spaces
+      if (/[^a-zA-Z\s]/.test(value)) {
+        errorMsg = 'Only alphabets allowed';
+        newValue = value.replace(/[^a-zA-Z\s]/g, '');
+      }
+    }
+    if (name === 'panNumber') {
+      // Only allow uppercase letters and numbers
+      if (/[^A-Z0-9]/.test(value) || /[a-z]/.test(value)) {
+        errorMsg = 'Special character and lowercase letters are not allowed';
+        newValue = value.replace(/[^A-Z0-9]/g, '').replace(/[a-z]/g, '');
+      }
+    }
+    if (name === 'gstNumber') {
+      // Only allow uppercase letters and numbers
+      if (/[^A-Z0-9]/.test(value) || /[a-z]/.test(value)) {
+        errorMsg = 'Special character and lowercase letters are not allowed';
+        newValue = value.replace(/[^A-Z0-9]/g, '').replace(/[a-z]/g, '');
+      }
+    }
+    if (name === 'email') {
+      // Only allow lowercase, @ - _ + .
+      if (/[^a-z0-9@\-_.+]/.test(value) || /[A-Z]/.test(value)) {
+        errorMsg = 'Only lowercase letters, numbers, and @  -  _  +  . are allowed';
+        newValue = value.replace(/[^a-z0-9@\-_.+]/g, '').replace(/[A-Z]/g, '');
+      }
+    }
+
+  setForm({ ...form, [name]: newValue });
+  setFieldErrors(prev => ({ ...prev, [name]: errorMsg }));
   };
 
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      // console.log('Logo file selected:', file.name, file.size, file.type);
+      console.log('Logo file selected:', file.name, file.size, file.type);
       
       setLogoFile(file);
       
       try {
-        // console.log(`Compressing logo: ${file.name}, original size: ${(file.size / 1024).toFixed(2)}KB`);
+        console.log(`Compressing logo: ${file.name}, original size: ${(file.size / 1024).toFixed(2)}KB`);
         const compressedBase64 = await compressImage(file, 100);
-        // console.log(`Compressed logo size: ${(compressedBase64.length * 0.75 / 1024).toFixed(2)}KB`);
+        console.log(`Compressed logo size: ${(compressedBase64.length * 0.75 / 1024).toFixed(2)}KB`);
         setForm(prev => ({ ...prev, logo: compressedBase64 }));
       } catch (error) {
         console.error('Error compressing logo:', error);
@@ -63,19 +118,32 @@ const AddOrganizationPage: React.FC<AddOrganizationPageProps> = ({ onBack, editI
   };
 
   const validate = () => {
-    if (!/^\d{10}$/.test(form.contactNumber)) {
-      setError('Phone must be 10 digits');
+    if (!/^[a-zA-Z0-9]+$/.test(form.organizationId)) {
+      setFieldErrors(prev => ({ ...prev, organizationId: 'Special characters not allowed' }));
       return false;
     }
-    if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(form.gstNumber)) {
-      setError('GST Number must be in valid format (e.g., 22AAAAA0000A1Z5)');
+    if (!/^\d{10}$/.test(form.contactNumber)) {
+      setFieldErrors(prev => ({ ...prev, contactNumber: 'Phone must be 10 digits' }));
+      return false;
+    }
+    if (!/^[a-zA-Z\s]+$/.test(form.contactPersonName)) {
+      setFieldErrors(prev => ({ ...prev, contactPersonName: 'Only alphabets allowed' }));
       return false;
     }
     if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(form.panNumber)) {
-      setError('PAN Number must be in valid format (e.g., AAAAA0000A)');
+      setFieldErrors(prev => ({ ...prev, panNumber: 'PAN Number must be in valid format (e.g., AAAAA0000A)' }));
+      return false;
+    }
+    if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(form.gstNumber)) {
+      setFieldErrors(prev => ({ ...prev, gstNumber: 'GST Number must be in valid format (e.g., 22AAAAA0000A1Z5)' }));
+      return false;
+    }
+    if (!/^[a-z0-9@\-_.+]+$/.test(form.email)) {
+      setFieldErrors(prev => ({ ...prev, email: 'Only lowercase letters, numbers, and @ - _ + . allowed' }));
       return false;
     }
     setError('');
+    setFieldErrors({ contactNumber: '', contactPersonName: '', panNumber: '', gstNumber: '', email: '' });
     return true;
   };
 
@@ -83,17 +151,17 @@ const AddOrganizationPage: React.FC<AddOrganizationPageProps> = ({ onBack, editI
     e.preventDefault();
     if (!validate()) return;
     
-    // console.log('Form submission started:', { editId, form });
+    console.log('Form submission started:', { editId, form });
     
     try {
       if (editId) {
-        // console.log('Calling updateOrganization API with:', { editId, form });
+        console.log('Calling updateOrganization API with:', { editId, form });
         await updateOrganization(editId, form);
-        // console.log('Update successful');
+        console.log('Update successful');
       } else {
-        // console.log('Calling createOrganization API with:', form);
+        console.log('Calling createOrganization API with:', form);
         await createOrganization(form);
-        // console.log('Create successful');
+        console.log('Create successful');
       }
       setForm(initialState);
       setLogoFile(null);
@@ -117,33 +185,36 @@ const AddOrganizationPage: React.FC<AddOrganizationPageProps> = ({ onBack, editI
             <div style={{ fontWeight: 700, fontSize: 22, marginBottom: 24 }}>Company Information</div>
             <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
               <div style={{ flex: 1 }}>
-                <label style={{ fontWeight: 500 }}>Organization Name *</label>
+                <label style={{ fontWeight: 500 }}>Organization Name <span style={{ color: 'red' }}>*</span></label>
                 <input name="organizationName" placeholder="Enter organization name" value={form.organizationName} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
               </div>
               <div style={{ flex: 1 }}>
-                <label style={{ fontWeight: 500 }}>Organization ID *</label>
+                <label style={{ fontWeight: 500 }}>Organization ID <span style={{ color: 'red' }}>*</span></label>
                 <input name="organizationId" placeholder="Enter organization ID" value={form.organizationId} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
               </div>
             </div>
             <div style={{ marginBottom: 24 }}>
-              <label style={{ fontWeight: 500 }}>Address</label>
+              <label style={{ fontWeight: 500 }}>Address <span style={{ color: 'red' }}>*</span></label>
               <input name="address" placeholder="Enter organization address" value={form.address} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
             </div>
             <div style={{ fontWeight: 700, fontSize: 22, marginBottom: 24 }}>Contact Information</div>
             <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
               <div style={{ flex: 1 }}>
-                <label style={{ fontWeight: 500 }}>Contact Person Name *</label>
+                <label style={{ fontWeight: 500 }}>Contact Person Name <span style={{ color: 'red' }}>*</span></label>
                 <input name="contactPersonName" placeholder="Enter contact person name" value={form.contactPersonName} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                {fieldErrors.contactPersonName && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.contactPersonName}</div>}
               </div>
               <div style={{ flex: 1 }}>
-                <label style={{ fontWeight: 500 }}>Contact Number *</label>
+                <label style={{ fontWeight: 500 }}>Contact Number <span style={{ color: 'red' }}>*</span></label>
                 <input name="contactNumber" placeholder="Phone (10 digits)" value={form.contactNumber} onChange={handleChange} required maxLength={10} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                {fieldErrors.contactNumber && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.contactNumber}</div>}
               </div>
             </div>
             <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
               <div style={{ flex: 1 }}>
-                <label style={{ fontWeight: 500 }}>Email *</label>
-                <input name="email" placeholder="Enter organization email" value={form.email} onChange={handleChange} required type="email" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                <label style={{ fontWeight: 500 }}>Email <span style={{ color: 'red' }}>*</span></label>
+                <input name="email" placeholder="Enter organization email" value={form.email} onChange={handleChange} required type="text" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                {fieldErrors.email && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.email}</div>}
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ fontWeight: 500 }}>Logo</label>
@@ -167,12 +238,14 @@ const AddOrganizationPage: React.FC<AddOrganizationPageProps> = ({ onBack, editI
             <div style={{ fontWeight: 700, fontSize: 22, marginBottom: 24 }}>Tax Information</div>
             <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
               <div style={{ flex: 1 }}>
-                <label style={{ fontWeight: 500 }}>GST Number *</label>
+                <label style={{ fontWeight: 500 }}>GST Number <span style={{ color: 'red' }}>*</span></label>
                 <input name="gstNumber" placeholder="e.g., 22AAAAA0000A1Z5" value={form.gstNumber} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                {fieldErrors.gstNumber && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.gstNumber}</div>}
               </div>
               <div style={{ flex: 1 }}>
-                <label style={{ fontWeight: 500 }}>PAN Number *</label>
+                <label style={{ fontWeight: 500 }}>PAN Number <span style={{ color: 'red' }}>*</span></label>
                 <input name="panNumber" placeholder="e.g., AAAAA0000A" value={form.panNumber} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                {fieldErrors.panNumber && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.panNumber}</div>}
               </div>
             </div>
             {error && <div style={{ color: 'red', marginBottom: 16 }}>{error}</div>}
