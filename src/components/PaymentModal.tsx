@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
-import BillDisplaySimple from './BillDisplaySimple';
+import InvoiceDisplay from './InvoiceDisplay';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -21,8 +21,8 @@ interface PaymentModalProps {
     discount: number;
     totalAmount: number;
   }>;
-  billData?: any;
-  showBill?: boolean;
+  invoiceData?: any;
+  showInvoice?: boolean;
 }
 
 const PaymentModal: React.FC<PaymentModalProps> = ({
@@ -32,11 +32,11 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   onPaymentComplete,
   customerDetails,
   cartItems = [],
-  billData,
-  showBill = false
+  invoiceData,
+  showInvoice = false
 }) => {
   const [selectedMethod, setSelectedMethod] = useState<'cash' | 'card' | 'UPI'>('cash');
-  const [paymentStep, setPaymentStep] = useState<'method' | 'processing' | 'complete' | 'bill'>('method');
+  const [paymentStep, setPaymentStep] = useState<'method' | 'processing' | 'complete' | 'invoice'>('method');
   const [upiQRCode, setUpiQRCode] = useState<string>('');
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [transactionId, setTransactionId] = useState<string>('');
@@ -56,17 +56,17 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     }
   }, [selectedMethod, totalAmount]);
 
-  // Handle bill display when bill data is provided
+  // Handle invoice display when invoice data is provided
   useEffect(() => {
-    if (showBill && billData && paymentStep === 'complete') {
-      setPaymentStep('bill');
+    if (showInvoice && invoiceData && paymentStep === 'complete') {
+      setPaymentStep('invoice');
     }
-  }, [showBill, billData, paymentStep]);
+  }, [showInvoice, invoiceData, paymentStep]);
 
   const generateUPIQRCode = async () => {
     try {
       // UPI payment URL format
-      const upiId = 'your-merchant@paytm'; // Replace with your actual UPI ID
+      const upiId = 'aniketkuanar2001@oksbi'; // Replace with your actual UPI ID
       const merchantName = 'Suguna Chicken Store';
       const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&am=${totalAmount}&cu=INR&tn=${encodeURIComponent(`Payment for Order ${transactionId}`)}`;
       
@@ -94,7 +94,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     setPaymentCompleted(true);
     setPaymentStep('complete');
     
-    // Call the parent callback to handle transaction creation and bill generation
+    // Call the parent callback to handle transaction creation and invoice generation
     onPaymentComplete(selectedMethod, transactionId);
   };
 
@@ -106,7 +106,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     onClose();
   };
 
-  const handleBillClose = () => {
+  const handleInvoiceClose = () => {
     handleClose();
   };
 
@@ -382,7 +382,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               Transaction ID: {transactionId}
             </div>
             <div style={{ fontSize: '14px', color: '#666' }}>
-              Generating bill...
+              Generating invoice...
             </div>
             <div style={{ marginTop: '16px' }}>
               <div style={{ 
@@ -398,11 +398,11 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
           </div>
         )}
 
-        {/* Bill Display */}
-        {paymentStep === 'bill' && billData && (
-          <BillDisplaySimple 
-            billData={billData} 
-            onClose={handleBillClose}
+        {/* Invoice Display */}
+        {paymentStep === 'invoice' && invoiceData && (
+          <InvoiceDisplay 
+            invoiceData={invoiceData} 
+            onClose={handleInvoiceClose}
           />
         )}
       </div>

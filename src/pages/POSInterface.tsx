@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { salesAPI, catalogueAPI, billingAPI, storeAPI } from '../api';
+import { salesAPI, catalogueAPI, invoiceAPI, storeAPI } from '../api';
 import PaymentModal from '../components/PaymentModal';
 
 interface CartItem {
@@ -29,8 +29,8 @@ const POSInterface: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [billData, setBillData] = useState<any>(null);
-  const [showBill, setShowBill] = useState(false);
+  const [invoiceData, setInvoiceData] = useState<any>(null);
+  const [showInvoice, setShowInvoice] = useState(false);
 
   // Load stores on component mount
   useEffect(() => {
@@ -190,16 +190,18 @@ const POSInterface: React.FC = () => {
       const transactionResponse = await salesAPI.createTransaction(transactionData);
       const transaction = transactionResponse.data.transaction;
 
-      // Generate bill
-      const billResponse = await billingAPI.generateBill({
+      // Generate invoice
+      const invoiceResponse = await invoiceAPI.generateInvoice({
         transactionId: transaction._id
       });
 
-      // Set bill data and show bill in modal
-      setBillData(billResponse.data);
-      setShowBill(true);
+      // Set invoice data and show invoice in modal
+      console.log('Invoice response from API:', invoiceResponse.data);
+      console.log('Invoice data being set:', invoiceResponse.data.invoice);
+      setInvoiceData(invoiceResponse.data.invoice);
+      setShowInvoice(true);
 
-      setMessage(`Transaction completed! Bill No: ${billResponse.data.billNo}`);
+      setMessage(`Transaction completed! Invoice No: ${invoiceResponse.data.invoiceNo}`);
       setCart([]);
       setCustomerDetails({});
       setBarcodeInput('');
@@ -536,15 +538,15 @@ const POSInterface: React.FC = () => {
         isOpen={showPaymentModal}
         onClose={() => {
           setShowPaymentModal(false);
-          setShowBill(false);
-          setBillData(null);
+          setShowInvoice(false);
+          setInvoiceData(null);
         }}
         totalAmount={grandTotal}
         onPaymentComplete={handlePaymentComplete}
         customerDetails={customerDetails}
         cartItems={cart}
-        billData={billData}
-        showBill={showBill}
+        invoiceData={invoiceData}
+        showInvoice={showInvoice}
       />
     </div>
   );

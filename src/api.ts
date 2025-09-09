@@ -81,12 +81,12 @@ export const salesAPI = {
   getProductByBarcode: (barcode: string) => api.get(`/sales/product/barcode/${barcode}`),
 };
 
-// Billing API
-export const billingAPI = {
-  generateBill: (data: { transactionId: string }) => api.post('/billing/generate', data),
-  getAll: () => api.get('/billing'),
-  getById: (id: string) => api.get(`/billing/${id}`),
-  getByStore: (storeId: string) => api.get(`/billing/store/${storeId}`),
+// Invoice API
+export const invoiceAPI = {
+  generateInvoice: (data: { transactionId: string }) => api.post('/invoices/generate', data),
+  getAll: () => api.get('/invoices'),
+  getById: (id: string) => api.get(`/invoices/${id}`),
+  getByStore: (storeId: string) => api.get(`/invoices/store/${storeId}`),
 };
 
 // Legacy API (for backward compatibility)

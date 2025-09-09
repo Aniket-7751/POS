@@ -42,6 +42,10 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
   const [error, setError] = useState('');
   const [image, setImage] = useState<File | null>(null);
   const [thumbnail, setThumbnail] = useState<File | null>(null);
+  const [existingImage, setExistingImage] = useState<string>('');
+  const [existingThumbnail, setExistingThumbnail] = useState<string>('');
+  const [removeImage, setRemoveImage] = useState<boolean>(false);
+  const [removeThumbnail, setRemoveThumbnail] = useState<boolean>(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [volumeValue, setVolumeValue] = useState('');
@@ -52,6 +56,13 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
   useEffect(() => {
     if (editData) {
       setForm(editData);
+      // Set existing images
+      if (editData.image) {
+        setExistingImage(editData.image.startsWith('data:image') ? editData.image : `http://localhost:5000${editData.image}`);
+      }
+      if (editData.thumbnail) {
+        setExistingThumbnail(editData.thumbnail.startsWith('data:image') ? editData.thumbnail : `http://localhost:5000${editData.thumbnail}`);
+      }
       // Parse existing volume of measurement
       if (editData.volumeOfMeasurement) {
         const volumeMatch = editData.volumeOfMeasurement.match(/^(\d+(?:\.\d+)?)\s*(kg|gm|g|piece|pieces|ml|l)$/i);
@@ -142,6 +153,26 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
     setVolumeUnit(e.target.value);
   };
 
+  const handleRemoveImage = (type: 'image' | 'thumbnail') => {
+    if (type === 'image') {
+      setRemoveImage(true);
+      setImage(null);
+      setExistingImage('');
+    } else {
+      setRemoveThumbnail(true);
+      setThumbnail(null);
+      setExistingThumbnail('');
+    }
+  };
+
+  const handleClearNewImage = (type: 'image' | 'thumbnail') => {
+    if (type === 'image') {
+      setImage(null);
+    } else {
+      setThumbnail(null);
+    }
+  };
+
   const validateStep1 = () => {
     if (!form.sku || !form.itemName || !volumeValue || !volumeUnit || !form.categoryId || !form.organizationId) {
       setError('Please fill all required fields (SKU, Item Name, Volume Value, Volume Unit, Category, Organization)');
@@ -171,9 +202,13 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
       let payload: any = { ...form };
       if (image) {
         payload.image = await fileToBase64(image);
+      } else if (removeImage) {
+        payload.image = '';
       }
       if (thumbnail) {
         payload.thumbnail = await fileToBase64(thumbnail);
+      } else if (removeThumbnail) {
+        payload.thumbnail = '';
       }
 
     if (editId) {
@@ -188,6 +223,10 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
     setForm(initialState);
       setImage(null);
       setThumbnail(null);
+      setExistingImage('');
+      setExistingThumbnail('');
+      setRemoveImage(false);
+      setRemoveThumbnail(false);
       setVolumeValue('');
       setVolumeUnit('');
       setError('');
@@ -358,13 +397,166 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
             ) : (
               <>
                 <div style={{ fontWeight: 600, fontSize: 20, marginBottom: 16 }}>Product Information</div>
-                <div style={{ marginBottom: 16 }}>
-                  <label>Upload Image</label>
-                  <input type="file" accept="image/*" onChange={e => handleFileChange(e, 'image')} style={{ display: 'block', marginTop: 4 }} />
-                </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label>Upload Thumbnail Image</label>
-                  <input type="file" accept="image/*" onChange={e => handleFileChange(e, 'thumbnail')} style={{ display: 'block', marginTop: 4 }} />
+                
+                {/* Image Upload Section */}
+                <div style={{ marginBottom: 24, padding: 20, backgroundColor: '#f8f9fa', borderRadius: 8, border: '1px solid #e9ecef' }}>
+                  <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 16, color: '#495057' }}>Product Images</div>
+                  
+                  {/* Main Image */}
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>Main Image</label>
+                    {existingImage && !removeImage ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
+                        <img 
+                          src={existingImage} 
+                          alt="Current image" 
+                          style={{ 
+                            width: 100, 
+                            height: 100, 
+                            objectFit: 'cover', 
+                            borderRadius: 8, 
+                            border: '2px solid #ddd' 
+                          }}
+                        />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <button 
+                            type="button"
+                            onClick={() => handleRemoveImage('image')}
+                            style={{ 
+                              padding: '6px 12px', 
+                              background: '#dc3545', 
+                              color: 'white', 
+                              border: 'none', 
+                              borderRadius: 4, 
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              fontWeight: '500'
+                            }}
+                          >
+                            Remove Image
+                          </button>
+                          <span style={{ fontSize: '12px', color: '#6c757d' }}>Current image</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ marginBottom: 12 }}>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={e => handleFileChange(e, 'image')} 
+                          style={{ display: 'block', marginBottom: 8 }} 
+                        />
+                        {image && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+                            <img 
+                              src={URL.createObjectURL(image)} 
+                              alt="New image preview" 
+                              style={{ 
+                                width: 80, 
+                                height: 80, 
+                                objectFit: 'cover', 
+                                borderRadius: 6, 
+                                border: '2px solid #28a745' 
+                              }}
+                            />
+                            <button 
+                              type="button"
+                              onClick={() => handleClearNewImage('image')}
+                              style={{ 
+                                padding: '4px 8px', 
+                                background: '#6c757d', 
+                                color: 'white', 
+                                border: 'none', 
+                                borderRadius: 4, 
+                                cursor: 'pointer',
+                                fontSize: '11px'
+                              }}
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Thumbnail Image */}
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>Thumbnail Image</label>
+                    {existingThumbnail && !removeThumbnail ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
+                        <img 
+                          src={existingThumbnail} 
+                          alt="Current thumbnail" 
+                          style={{ 
+                            width: 80, 
+                            height: 80, 
+                            objectFit: 'cover', 
+                            borderRadius: 8, 
+                            border: '2px solid #ddd' 
+                          }}
+                        />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <button 
+                            type="button"
+                            onClick={() => handleRemoveImage('thumbnail')}
+                            style={{ 
+                              padding: '6px 12px', 
+                              background: '#dc3545', 
+                              color: 'white', 
+                              border: 'none', 
+                              borderRadius: 4, 
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              fontWeight: '500'
+                            }}
+                          >
+                            Remove Thumbnail
+                          </button>
+                          <span style={{ fontSize: '12px', color: '#6c757d' }}>Current thumbnail</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ marginBottom: 12 }}>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={e => handleFileChange(e, 'thumbnail')} 
+                          style={{ display: 'block', marginBottom: 8 }} 
+                        />
+                        {thumbnail && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+                            <img 
+                              src={URL.createObjectURL(thumbnail)} 
+                              alt="New thumbnail preview" 
+                              style={{ 
+                                width: 60, 
+                                height: 60, 
+                                objectFit: 'cover', 
+                                borderRadius: 6, 
+                                border: '2px solid #28a745' 
+                              }}
+                            />
+                            <button 
+                              type="button"
+                              onClick={() => handleClearNewImage('thumbnail')}
+                              style={{ 
+                                padding: '4px 8px', 
+                                background: '#6c757d', 
+                                color: 'white', 
+                                border: 'none', 
+                                borderRadius: 4, 
+                                cursor: 'pointer',
+                                fontSize: '11px'
+                              }}
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 {/* Barcode Generation Section */}
                 <div style={{ marginBottom: 16, padding: 16, backgroundColor: '#f8f9fa', borderRadius: 8, border: '1px solid #e9ecef' }}>
