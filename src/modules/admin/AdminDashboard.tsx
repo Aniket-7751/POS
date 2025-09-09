@@ -13,10 +13,12 @@ interface DashboardStats {
 interface SalesData {
   month: string;
   sales: number;
+  transactions: number;
 }
 
 interface ProductData {
   productName: string;
+  sku: string;
   quantitySold: number;
   revenue: number;
 }
@@ -47,6 +49,12 @@ const AdminDashboard: React.FC = () => {
         dashboardAPI.getMostSoldProducts()
       ]);
 
+      console.log('Dashboard API Responses:', {
+        stats: statsResponse.data,
+        monthlySales: salesResponse.data,
+        mostSoldProducts: productsResponse.data
+      });
+      
       setStats(statsResponse.data);
       setMonthlySalesData(salesResponse.data);
       setMostSoldProducts(productsResponse.data);
@@ -310,14 +318,60 @@ const AdminDashboard: React.FC = () => {
           
           <div style={{ 
             height: '250px', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            color: '#dc3545',
-            fontSize: '16px',
-            fontWeight: '500'
+            overflowY: 'auto',
+            padding: '8px'
           }}>
-            {loading ? 'Loading...' : 'No Data Available'}
+            {loading ? (
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                height: '100%',
+                color: '#6c757d',
+                fontSize: '16px'
+              }}>
+                Loading...
+              </div>
+            ) : monthlySalesData.length > 0 ? (
+              <div>
+                {monthlySalesData.map((month, index) => (
+                  <div key={index} style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '8px 12px',
+                    marginBottom: '8px',
+                    background: index % 2 === 0 ? '#f8f9fa' : 'white',
+                    borderRadius: '6px',
+                    border: '1px solid #e9ecef'
+                  }}>
+                    <div>
+                      <div style={{ fontWeight: '600', color: '#333' }}>{month.month}</div>
+                      <div style={{ fontSize: '12px', color: '#6c757d' }}>
+                        {month.transactions} transactions
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontWeight: '700', color: '#28a745', fontSize: '16px' }}>
+                        {formatCurrency(month.sales)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                height: '100%',
+                color: '#dc3545',
+                fontSize: '16px',
+                fontWeight: '500'
+              }}>
+                No Data Available
+              </div>
+            )}
           </div>
         </div>
 
@@ -481,14 +535,62 @@ const AdminDashboard: React.FC = () => {
         
         <div style={{ 
           height: '250px', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          color: '#dc3545',
-          fontSize: '16px',
-          fontWeight: '500'
+          overflowY: 'auto',
+          padding: '8px'
         }}>
-          {loading ? 'Loading...' : 'No Data Available'}
+          {loading ? (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              height: '100%',
+              color: '#6c757d',
+              fontSize: '16px'
+            }}>
+              Loading...
+            </div>
+          ) : mostSoldProducts.length > 0 ? (
+            <div>
+              {mostSoldProducts.map((product, index) => (
+                <div key={index} style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '8px 12px',
+                  marginBottom: '8px',
+                  background: index % 2 === 0 ? '#f8f9fa' : 'white',
+                  borderRadius: '6px',
+                  border: '1px solid #e9ecef'
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '600', color: '#333', fontSize: '14px' }}>
+                      {product.productName}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#6c757d' }}>
+                      SKU: {product.sku} • Qty: {product.quantitySold}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: '700', color: '#28a745', fontSize: '16px' }}>
+                      {formatCurrency(product.revenue)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              height: '100%',
+              color: '#dc3545',
+              fontSize: '16px',
+              fontWeight: '500'
+            }}>
+              No Data Available
+            </div>
+          )}
         </div>
       </div>
     </div>
