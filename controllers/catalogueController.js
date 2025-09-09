@@ -35,9 +35,11 @@ exports.createCatalogue = async (req, res) => {
     
     // Use itemId as the _id
     catalogueData._id = catalogueData.itemId;
-    
+    // If expiry is a number, convert to string with unit (default to hours)
+    if (typeof catalogueData.expiry === 'number') {
+      catalogueData.expiry = `${catalogueData.expiry} hours`;
+    }
     console.log('Final catalogue data:', catalogueData);
-    
     const catalogue = new Catalogue(catalogueData);
     await catalogue.save();
     console.log('Catalogue saved successfully:', catalogue);
@@ -103,7 +105,10 @@ exports.updateCatalogueById = async (req, res) => {
     if (catalogueData.itemId) {
       catalogueData._id = catalogueData.itemId;
     }
-    
+    // If expiry is a number, convert to string with unit (default to hours)
+    if (typeof catalogueData.expiry === 'number') {
+      catalogueData.expiry = `${catalogueData.expiry} hours`;
+    }
     const catalogue = await Catalogue.findByIdAndUpdate(req.params.id, catalogueData, { new: true });
     if (!catalogue) return res.status(404).json({ error: 'Not found' });
     res.json(catalogue);

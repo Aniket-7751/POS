@@ -11,7 +11,13 @@ exports.getAllUsers = async (req, res) => {
 
 exports.createUser = async (req, res) => {
   try {
-    const user = new User(req.body);
+    const userId = `USER${Date.now().toString().slice(-6)}`;
+    const userData = {
+      _id: userId,
+      userId: userId,
+      ...req.body
+    };
+    const user = new User(userData);
     await user.save();
     res.status(201).json(user);
   } catch (err) {

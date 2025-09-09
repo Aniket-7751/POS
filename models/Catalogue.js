@@ -19,13 +19,13 @@ const catalogueSchema = new mongoose.Schema({
   },
   certification: { type: String }, // e.g., "FSSAI", "ISO"
   price: { type: Number, required: true },
-  stock: { type: Number, required: true, default: 0 },
+  stock: { type: Number, default: 0 },
   barcode: { type: String },
   status: { type: String, enum: ['active', 'inactive'], default: 'active' },
   image: { type: String }, // image URL or path
   thumbnail: { type: String }, // thumbnail URL or path
   instructions: { type: String },
-  expiry: { type: Number }, // in hours
+  expiry: { type: String }, // e.g., '24 hours' or '24 days'
   organizationId: { type: String, ref: 'Organization', required: true }
 }, { timestamps: true, _id: false });
 

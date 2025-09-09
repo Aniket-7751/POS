@@ -362,7 +362,10 @@ exports.createOrganizationUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create organization user
+    const userId = `USER${Date.now().toString().slice(-6)}`;
     const user = new User({
+      _id: userId,
+      userId: userId,
       name,
       email,
       password: hashedPassword,
@@ -431,7 +434,10 @@ exports.createStoreUser = async (req, res) => {
     }
 
     // Create store user
+    const userId = `USER${Date.now().toString().slice(-6)}`;
     const user = new User({
+      _id: userId,
+      userId: userId,
       name,
       email,
       password: hashedPassword,

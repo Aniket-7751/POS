@@ -163,3 +163,128 @@ exports.getProductByBarcode = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// Get sales by date range
+exports.getSalesByDateRange = async (req, res) => {
+  try {
+    const { start, end } = req.query;
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    
+    const sales = await Sale.find({
+      dateTime: {
+        $gte: startDate,
+        $lte: endDate
+      }
+    })
+    .populate('storeId')
+    .populate('cashier')
+    .sort({ dateTime: -1 });
+    
+    res.json(sales);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get sales by transaction ID
+exports.getSalesByTransactionId = async (req, res) => {
+  try {
+    const { transactionId } = req.params;
+    const sale = await Sale.findOne({ transactionId })
+      .populate('storeId')
+      .populate('cashier');
+    
+    if (!sale) {
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+    
+    res.json(sale);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get sales statistics
+exports.getSalesStats = async (req, res) => {
+  try {
+    const totalSales = await Sale.countDocuments();
+    const totalRevenue = await Sale.aggregate([
+      { $group: { _id: null, total: { $sum: '$grandTotal' } } }
+    ]);
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const todaySales = await Sale.countDocuments({
+      dateTime: { $gte: today, $lt: tomorrow }
+    });
+    
+    const todayRevenue = await Sale.aggregate([
+      {
+        $match: {
+          dateTime: { $gte: today, $lt: tomorrow }
+        }
+      },
+      { $group: { _id: null, total: { $sum: '$grandTotal' } } }
+    ]);
+    
+    const paymentMethodStats = await Sale.aggregate([
+      {
+        $group: {
+          _id: '$paymentMethod',
+          count: { $sum: 1 },
+          total: { $sum: '$grandTotal' }
+        }
+      }
+    ]);
+    
+    res.json({
+      totalSales,
+      totalRevenue: totalRevenue[0]?.total || 0,
+      todaySales,
+      todayRevenue: todayRevenue[0]?.total || 0,
+      paymentMethodStats
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get today's sales
+exports.getTodaysSales = async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const sales = await Sale.find({
+      dateTime: { $gte: today, $lt: tomorrow }
+    })
+    .populate('storeId')
+    .populate('cashier')
+    .sort({ dateTime: -1 });
+    
+    res.json(sales);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get sales by payment method
+exports.getSalesByPaymentMethod = async (req, res) => {
+  try {
+    const { paymentMethod } = req.params;
+    const sales = await Sale.find({ paymentMethod })
+      .populate('storeId')
+      .populate('cashier')
+      .sort({ dateTime: -1 });
+    
+    res.json(sales);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

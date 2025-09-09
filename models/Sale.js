@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const salesSchema = new mongoose.Schema({
   transactionId: { type: String, required: true, unique: true },
-  storeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Store', required: true },
+  storeId: { type: String, ref: 'Store', required: true },
   items: [{
     sku: { type: String, required: true },
     itemName: { type: String, required: true },
@@ -23,7 +23,7 @@ const salesSchema = new mongoose.Schema({
     phone: String,
     email: String
   },
-  cashier: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+  cashier: { type: String, ref: 'User' }
 });
 
 module.exports = mongoose.model('Sale', salesSchema);
