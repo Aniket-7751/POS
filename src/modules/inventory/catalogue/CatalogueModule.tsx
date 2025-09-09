@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { getCatalogues, deleteCatalogue, getCatalogueById } from './catalogueApi';
 import { Catalogue } from './types';
 import AddCataloguePage from './AddCataloguePage';
+import BarcodeDisplay from '../../../components/BarcodeDisplay';
 
 
 const CatalogueModule: React.FC = () => {
@@ -10,10 +11,20 @@ const CatalogueModule: React.FC = () => {
   const [showAdd, setShowAdd] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Catalogue | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const fetchCatalogues = async () => {
-    const res = await getCatalogues();
-    setCatalogues(res.data as Catalogue[]);
+    // console.log('Fetching catalogues...');
+    setLoading(true);
+    try {
+      const res = await getCatalogues();
+      // console.log('Catalogues fetched:', res.data);
+      setCatalogues(res.data as Catalogue[]);
+    } catch (error) {
+      console.error('Error fetching catalogues:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -32,10 +43,25 @@ const CatalogueModule: React.FC = () => {
   };
 
   if (showAdd) {
-    return <AddCataloguePage onBack={() => { setShowAdd(false); fetchCatalogues(); }} />;
+    return <AddCataloguePage onBack={() => { 
+      // console.log('AddCataloguePage onBack called'); 
+      setShowAdd(false); 
+      // Add a small delay to ensure database is updated
+      setTimeout(() => {
+        fetchCatalogues();
+      }, 200);
+    }} />;
   }
   if (editId && editData) {
-    return <AddCataloguePage onBack={() => { setEditId(null); setEditData(null); fetchCatalogues(); }} editId={editId} editData={editData} />;
+    return <AddCataloguePage onBack={() => { 
+      // console.log('EditCataloguePage onBack called'); 
+      setEditId(null); 
+      setEditData(null); 
+      // Add a small delay to ensure database is updated
+      setTimeout(() => {
+        fetchCatalogues();
+      }, 200);
+    }} editId={editId} editData={editData} />;
   }
 
   return (
@@ -60,12 +86,15 @@ const CatalogueModule: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {catalogues.map(cat => (
+            {catalogues.map(cat => {
+              // console.log('Rendering catalogue item:', cat.itemName, 'thumbnail:', cat.thumbnail);
+              return (
               <tr key={cat._id} style={{ borderBottom: '1px solid #f0f0f0', fontSize: 15 }}>
                 <td style={{ padding: 14 }}>
                   {cat.thumbnail ? (
                     <img 
-                      src={`http://localhost:5000${cat.thumbnail}`} 
+                      key={`${cat._id}-${cat.thumbnail}`}
+                      src={cat.thumbnail.startsWith('data:image') ? cat.thumbnail : `http://localhost:5000${cat.thumbnail}`} 
                       alt={cat.itemName}
                       style={{ 
                         width: 50, 
@@ -75,6 +104,7 @@ const CatalogueModule: React.FC = () => {
                         border: '1px solid #ddd' 
                       }}
                       onError={(e) => {
+                        // console.log('Image failed to load:', cat.thumbnail);
                         e.currentTarget.style.display = 'none';
                       }}
                     />
@@ -112,13 +142,38 @@ const CatalogueModule: React.FC = () => {
                     {cat.status}
                   </span>
                 </td>
-                <td style={{ padding: 14 }}>{cat.barcode || '-'}</td>
+                <td style={{ padding: 14 }}>
+                  {cat.barcode ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                      <BarcodeDisplay 
+                        barcodeNumber={cat.barcode}
+                        width={1.5}
+                        height={40}
+                        showText={false}
+                        format="CODE128"
+                      />
+                      <div style={{ 
+                        fontSize: '10px', 
+                        color: '#666', 
+                        fontFamily: 'monospace',
+                        wordBreak: 'break-all',
+                        textAlign: 'center',
+                        maxWidth: '120px'
+                      }}>
+                        {cat.barcode}
+                      </div>
+                    </div>
+                  ) : (
+                    <span style={{ color: '#999', fontSize: '12px' }}>No barcode</span>
+                  )}
+                </td>
                 <td style={{ padding: 14 }}>
                   <button onClick={() => handleEdit(cat._id!)} style={{ background: 'none', border: 'none', color: '#2980b9', fontWeight: 600, cursor: 'pointer', marginRight: 12 }}>Edit</button>
                   <button onClick={() => handleDelete(cat._id!)} style={{ background: 'none', border: 'none', color: '#e74c3c', fontWeight: 600, cursor: 'pointer' }}>Delete</button>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

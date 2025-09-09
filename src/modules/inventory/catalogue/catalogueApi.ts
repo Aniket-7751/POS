@@ -1,4 +1,5 @@
 import { catalogueAPI } from '../../../api';
+import { compressImage } from '../../../utils/imageCompression';
 
 export const getCatalogues = () => catalogueAPI.getAll();
 export const getCatalogueById = (id: string) => catalogueAPI.getById(id);
@@ -9,8 +10,7 @@ export const getCatalogueBySKU = (sku: string) => catalogueAPI.getBySKU(sku);
 export const getCatalogueByBarcode = (barcode: string) => catalogueAPI.getByBarcode(barcode);
 
 // File upload methods
-export const createCatalogueWithFiles = (data: FormData) => catalogueAPI.createWithFiles(data);
-export const updateCatalogueWithFiles = (id: string, data: FormData) => catalogueAPI.updateWithFiles(id, data);
+// Deprecated: file-upload endpoints removed in favor of base64 JSON payloads
 
 // Helper function to create FormData for file uploads
 export const buildFormData = (formData: any, imageFile?: File, thumbnailFile?: File) => {
@@ -36,4 +36,23 @@ export const buildFormData = (formData: any, imageFile?: File, thumbnailFile?: F
   }
   
   return data;
+};
+
+// Helper to convert File to compressed base64 data URL (100KB max)
+export const fileToBase64 = async (file: File): Promise<string> => {
+  try {
+    // console.log(`Compressing image: ${file.name}, original size: ${(file.size / 1024).toFixed(2)}KB`);
+    const compressedBase64 = await compressImage(file, 100);
+    // console.log(`Compressed image size: ${(compressedBase64.length * 0.75 / 1024).toFixed(2)}KB`);
+    return compressedBase64;
+  } catch (error) {
+    console.error('Error compressing image:', error);
+    // Fallback to original fileToBase64 if compression fails
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
 };
