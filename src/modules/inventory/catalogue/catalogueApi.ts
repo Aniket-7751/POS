@@ -1,4 +1,5 @@
 import { catalogueAPI } from '../../../api';
+import { compressImage } from '../../../utils/imageCompression';
 
 export const getCatalogues = () => catalogueAPI.getAll();
 export const getCatalogueById = (id: string) => catalogueAPI.getById(id);
@@ -37,12 +38,21 @@ export const buildFormData = (formData: any, imageFile?: File, thumbnailFile?: F
   return data;
 };
 
-// Helper to convert File to base64 data URL
-export const fileToBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+// Helper to convert File to compressed base64 data URL (100KB max)
+export const fileToBase64 = async (file: File): Promise<string> => {
+  try {
+    console.log(`Compressing image: ${file.name}, original size: ${(file.size / 1024).toFixed(2)}KB`);
+    const compressedBase64 = await compressImage(file, 100);
+    console.log(`Compressed image size: ${(compressedBase64.length * 0.75 / 1024).toFixed(2)}KB`);
+    return compressedBase64;
+  } catch (error) {
+    console.error('Error compressing image:', error);
+    // Fallback to original fileToBase64 if compression fails
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
 };

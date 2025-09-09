@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { getCatalogues, deleteCatalogue, getCatalogueById } from './catalogueApi';
 import { Catalogue } from './types';
 import AddCataloguePage from './AddCataloguePage';
+import BarcodeDisplay from '../../../components/BarcodeDisplay';
 
 
 const CatalogueModule: React.FC = () => {
@@ -141,7 +142,31 @@ const CatalogueModule: React.FC = () => {
                     {cat.status}
                   </span>
                 </td>
-                <td style={{ padding: 14 }}>{cat.barcode || '-'}</td>
+                <td style={{ padding: 14 }}>
+                  {cat.barcode ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                      <BarcodeDisplay 
+                        barcodeNumber={cat.barcode}
+                        width={1.5}
+                        height={40}
+                        showText={false}
+                        format="CODE128"
+                      />
+                      <div style={{ 
+                        fontSize: '10px', 
+                        color: '#666', 
+                        fontFamily: 'monospace',
+                        wordBreak: 'break-all',
+                        textAlign: 'center',
+                        maxWidth: '120px'
+                      }}>
+                        {cat.barcode}
+                      </div>
+                    </div>
+                  ) : (
+                    <span style={{ color: '#999', fontSize: '12px' }}>No barcode</span>
+                  )}
+                </td>
                 <td style={{ padding: 14 }}>
                   <button onClick={() => handleEdit(cat._id!)} style={{ background: 'none', border: 'none', color: '#2980b9', fontWeight: 600, cursor: 'pointer', marginRight: 12 }}>Edit</button>
                   <button onClick={() => handleDelete(cat._id!)} style={{ background: 'none', border: 'none', color: '#e74c3c', fontWeight: 600, cursor: 'pointer' }}>Delete</button>

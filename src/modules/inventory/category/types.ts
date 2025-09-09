@@ -4,6 +4,7 @@ export interface Category {
   categoryName: string;
   categoryDescription?: string;
   status: 'active' | 'inactive';
+  organizationId: string;
   createdAt?: string;
   updatedAt?: string;
 }

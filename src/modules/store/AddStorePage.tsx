@@ -1,7 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { createStore, updateStore } from './storeApi';
+import { getOrganizations } from '../organization/organizationApi';
+import { compressImage } from '../../utils/imageCompression';
 import { Store } from './types';
+import { Organization } from '../organization/types';
 
 const initialState: Store = {
   storeId: '',
@@ -25,6 +28,8 @@ interface AddStorePageProps {
 const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData }) => {
   const [form, setForm] = useState<Store>(initialState);
   const [error, setError] = useState('');
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [storePicture, setStorePicture] = useState<File | null>(null);
 
   useEffect(() => {
     if (editData) {
@@ -32,9 +37,45 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
     }
   }, [editData]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    const fetchOrganizations = async () => {
+      try {
+        const res = await getOrganizations();
+        setOrganizations(res.data);
+      } catch (error) {
+        console.error('Error fetching organizations:', error);
+      }
+    };
+    fetchOrganizations();
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: name === 'contactNumber' ? value.slice(0, 10) : value });
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      console.log('Store picture file selected:', file.name, file.size, file.type);
+      
+      setStorePicture(file);
+      
+      try {
+        console.log(`Compressing store image: ${file.name}, original size: ${(file.size / 1024).toFixed(2)}KB`);
+        const compressedBase64 = await compressImage(file, 100);
+        console.log(`Compressed store image size: ${(compressedBase64.length * 0.75 / 1024).toFixed(2)}KB`);
+        setForm(prev => ({ ...prev, storePicture: compressedBase64 }));
+      } catch (error) {
+        console.error('Error compressing store image:', error);
+        // Fallback to original method if compression fails
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setForm(prev => ({ ...prev, storePicture: reader.result as string }));
+        };
+        reader.readAsDataURL(file);
+      }
+    }
   };
 
   const validate = () => {
@@ -55,6 +96,7 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
       await createStore(form);
     }
     setForm(initialState);
+    setStorePicture(null);
     onBack();
   };
 
@@ -109,12 +151,33 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
             </div>
             <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
               <div style={{ flex: 1 }}>
-                <label style={{ fontWeight: 500 }}>Store Picture URL</label>
-                <input name="storePicture" placeholder="Enter store picture URL (optional)" value={form.storePicture} onChange={handleChange} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                <label style={{ fontWeight: 500 }}>Store Picture</label>
+                <input type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'block', marginTop: 4 }} />
+                {form.storePicture && (
+                  <img 
+                    src={form.storePicture} 
+                    alt="Store Preview" 
+                    style={{ 
+                      width: 100, 
+                      height: 100, 
+                      objectFit: 'cover', 
+                      marginTop: 8, 
+                      borderRadius: 6,
+                      border: '1px solid #ddd'
+                    }} 
+                  />
+                )}
               </div>
               <div style={{ flex: 1 }}>
-                <label style={{ fontWeight: 500 }}>Organization ID *</label>
-                <input name="organizationId" placeholder="Enter organization ID" value={form.organizationId} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                <label style={{ fontWeight: 500 }}>Organization *</label>
+                <select name="organizationId" value={form.organizationId} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}>
+                  <option value="">Select an organization</option>
+                  {organizations.map(org => (
+                    <option key={org._id} value={org._id}>
+                      {org.organizationName} ({org.organizationId})
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             {error && <div style={{ color: 'red', marginBottom: 16 }}>{error}</div>}
