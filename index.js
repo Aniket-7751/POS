@@ -13,6 +13,7 @@ const storeRoutes = require('./routes/storeRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const catalogueRoutes = require('./routes/catalogueRoutes');
 const invoiceRoutes = require('./routes/invoiceRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
 const authRoutes = require('./routes/authRoutes');
 
 const app = express();
@@ -35,6 +36,7 @@ app.use('/api/stores', storeRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/catalogues', catalogueRoutes);
 app.use('/api/invoices', invoiceRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://aniketkuanar2001:aniketkuanar2001@cluster0.kvpotek.mongodb.net/POS?retryWrites=true&w=majority';
