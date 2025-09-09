@@ -25,7 +25,7 @@ const catalogueSchema = new mongoose.Schema({
   image: { type: String }, // image URL or path
   thumbnail: { type: String }, // thumbnail URL or path
   instructions: { type: String },
-  expiry: { type: Number }, // in hours
+  expiry: { type: String }, // e.g., '24 hours' or '24 days'
   organizationId: { type: String, ref: 'Organization', required: true }
 }, { timestamps: true, _id: false });
 
