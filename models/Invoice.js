@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
-const billingSchema = new mongoose.Schema({
-  billNo: { type: String, required: true, unique: true },
+const invoiceSchema = new mongoose.Schema({
+  invoiceNo: { type: String, required: true, unique: true },
   transactionId: { type: String, ref: 'Sale', required: true },
   storeId: { type: String, ref: 'Store', required: true },
   organizationId: { type: String, ref: 'Organization', required: true },
@@ -22,8 +22,18 @@ const billingSchema = new mongoose.Schema({
     name: String,
     phone: String,
     email: String
-  }
+  },
+  // Additional invoice-specific fields
+  dueDate: { type: Date },
+  status: { type: String, enum: ['paid', 'pending', 'overdue'], default: 'paid' },
+  notes: { type: String },
+  // Store and organization display fields
+  storeName: { type: String },
+  storeAddress: { type: String },
+  organizationName: { type: String },
+  gstNumber: { type: String },
+  phoneNumber: { type: String }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Billing', billingSchema);
+module.exports = mongoose.model('Invoice', invoiceSchema);
 

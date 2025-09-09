@@ -25,6 +25,18 @@ exports.generateInvoice = async (req, res) => {
       return res.status(404).json({ error: 'Organization not found' });
     }
 
+    console.log('Store data:', {
+      storeName: store.storeName,
+      storeAddress: store.storeAddress,
+      organizationId: store.organizationId
+    });
+
+    console.log('Organization data:', {
+      organizationName: organization.organizationName,
+      gstNumber: organization.gstNumber,
+      contactNumber: organization.contactNumber
+    });
+
     // Generate invoice number
     const invoiceNo = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
 
@@ -41,11 +53,23 @@ exports.generateInvoice = async (req, res) => {
       dateTime: transaction.dateTime,
       customerDetails: transaction.customerDetails,
       status: 'paid', // Since it's a POS transaction, it's immediately paid
-      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      // Add store and organization details for display
+      storeName: store.storeName,
+      storeAddress: store.storeAddress,
+      organizationName: organization.organizationName,
+      gstNumber: organization.gstNumber,
+      phoneNumber: organization.contactNumber
     };
 
     const invoice = new Invoice(invoiceData);
     await invoice.save();
+
+    console.log('Invoice data being sent:', {
+      storeName: invoiceData.storeName,
+      storeAddress: invoiceData.storeAddress,
+      organizationName: invoiceData.organizationName
+    });
 
     res.status(201).json({
       message: 'Invoice generated successfully',

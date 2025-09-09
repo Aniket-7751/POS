@@ -10,12 +10,18 @@ exports.createCatalogue = async (req, res) => {
       try { catalogueData.nutritionValue = JSON.parse(catalogueData.nutritionValue); } catch (_) {}
     }
 
-    // Accept base64 images directly via JSON
+    // Accept base64 images directly via JSON or handle removal
     if (catalogueData.image && typeof catalogueData.image === 'string' && catalogueData.image.startsWith('data:image')) {
       // keep as-is (base64 data URL)
+    } else if (catalogueData.image === '') {
+      // explicitly remove image
+      catalogueData.image = '';
     }
     if (catalogueData.thumbnail && typeof catalogueData.thumbnail === 'string' && catalogueData.thumbnail.startsWith('data:image')) {
       // keep as-is (base64 data URL)
+    } else if (catalogueData.thumbnail === '') {
+      // explicitly remove thumbnail
+      catalogueData.thumbnail = '';
     }
 
     console.log('Creating catalogue with data (pre-files):', { ...catalogueData, image: !!catalogueData.image, thumbnail: !!catalogueData.thumbnail });
@@ -86,12 +92,18 @@ exports.updateCatalogueById = async (req, res) => {
       }
     }
     
-    // Accept base64 images directly via JSON
+    // Accept base64 images directly via JSON or handle removal
     if (catalogueData.image && typeof catalogueData.image === 'string' && catalogueData.image.startsWith('data:image')) {
-      // keep as-is
+      // keep as-is (base64 data URL)
+    } else if (catalogueData.image === '') {
+      // explicitly remove image
+      catalogueData.image = '';
     }
     if (catalogueData.thumbnail && typeof catalogueData.thumbnail === 'string' && catalogueData.thumbnail.startsWith('data:image')) {
-      // keep as-is
+      // keep as-is (base64 data URL)
+    } else if (catalogueData.thumbnail === '') {
+      // explicitly remove thumbnail
+      catalogueData.thumbnail = '';
     }
 
     // Parse nested fields sent as strings
