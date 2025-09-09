@@ -25,17 +25,17 @@ exports.generateInvoice = async (req, res) => {
       return res.status(404).json({ error: 'Organization not found' });
     }
 
-    console.log('Store data:', {
-      storeName: store.storeName,
-      storeAddress: store.storeAddress,
-      organizationId: store.organizationId
-    });
+    // console.log('Store data:', {
+    //   storeName: store.storeName,
+    //   storeAddress: store.storeAddress,
+    //   organizationId: store.organizationId
+    // });
 
-    console.log('Organization data:', {
-      organizationName: organization.organizationName,
-      gstNumber: organization.gstNumber,
-      contactNumber: organization.contactNumber
-    });
+    // console.log('Organization data:', {
+    //   organizationName: organization.organizationName,
+    //   gstNumber: organization.gstNumber,
+    //   contactNumber: organization.contactNumber
+    // });
 
     // Generate invoice number
     const invoiceNo = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
@@ -65,11 +65,11 @@ exports.generateInvoice = async (req, res) => {
     const invoice = new Invoice(invoiceData);
     await invoice.save();
 
-    console.log('Invoice data being sent:', {
-      storeName: invoiceData.storeName,
-      storeAddress: invoiceData.storeAddress,
-      organizationName: invoiceData.organizationName
-    });
+    // console.log('Invoice data being sent:', {
+    //   storeName: invoiceData.storeName,
+    //   storeAddress: invoiceData.storeAddress,
+    //   organizationName: invoiceData.organizationName
+    // });
 
     res.status(201).json({
       message: 'Invoice generated successfully',

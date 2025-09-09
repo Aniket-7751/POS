@@ -24,32 +24,32 @@ exports.createCatalogue = async (req, res) => {
       catalogueData.thumbnail = '';
     }
 
-    console.log('Creating catalogue with data (pre-files):', { ...catalogueData, image: !!catalogueData.image, thumbnail: !!catalogueData.thumbnail });
-    console.log('Files received:', req.files);
+    // console.log('Creating catalogue with data (pre-files):', { ...catalogueData, image: !!catalogueData.image, thumbnail: !!catalogueData.thumbnail });
+    // console.log('Files received:', req.files);
     
     // Handle image uploads if files are present
     if (req.files) {
       if (req.files.image) {
         catalogueData.image = `/uploads/${req.files.image[0].filename}`;
-        console.log('Image path set:', catalogueData.image);
+        // console.log('Image path set:', catalogueData.image);
       }
       if (req.files.thumbnail) {
         catalogueData.thumbnail = `/uploads/${req.files.thumbnail[0].filename}`;
-        console.log('Thumbnail path set:', catalogueData.thumbnail);
+        // console.log('Thumbnail path set:', catalogueData.thumbnail);
       }
     }
     
     // Use itemId as the _id
     catalogueData._id = catalogueData.itemId;
     
-    console.log('Final catalogue data:', catalogueData);
+    // console.log('Final catalogue data:', catalogueData);
     
     const catalogue = new Catalogue(catalogueData);
     await catalogue.save();
-    console.log('Catalogue saved successfully:', catalogue);
+    // console.log('Catalogue saved successfully:', catalogue);
     res.status(201).json(catalogue);
   } catch (err) {
-    console.error('Error creating catalogue:', err);
+    // console.error('Error creating catalogue:', err);
     res.status(400).json({ error: err.message });
   }
 };
@@ -57,13 +57,13 @@ exports.createCatalogue = async (req, res) => {
 exports.getAllCatalogues = async (req, res) => {
   try {
     const catalogues = await Catalogue.find();
-    console.log('Retrieved catalogues:', catalogues.length, 'items');
+    // console.log('Retrieved catalogues:', catalogues.length, 'items');
     catalogues.forEach(cat => {
-      console.log(`- ${cat.itemName}: image=${cat.image}, thumbnail=${cat.thumbnail}`);
+      // console.log(`- ${cat.itemName}: image=${cat.image}, thumbnail=${cat.thumbnail}`);
     });
     res.json(catalogues);
   } catch (err) {
-    console.error('Error fetching catalogues:', err);
+    // console.error('Error fetching catalogues:', err);
     res.status(500).json({ error: err.message });
   }
 };
