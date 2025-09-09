@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { authAPI } from '../api';
+import SignupSelector from './SignupSelector';
+import ForgotPassword from './ForgotPassword';
 
 interface LoginSelectorProps {
   onLogin: (user: any, token: string) => void;
@@ -11,29 +13,181 @@ const LoginSelector: React.FC<LoginSelectorProps> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showSignup, setShowSignup] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'error'>('checking');
+  const [fieldErrors, setFieldErrors] = useState({
+    email: '',
+    password: ''
+  });
+
+  // Test backend connection on component mount
+  React.useEffect(() => {
+    const testConnection = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/auth/profile', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        if (response.status === 401) {
+          // 401 is expected without token, means server is running
+          setConnectionStatus('connected');
+        } else {
+          setConnectionStatus('connected');
+        }
+      } catch (error) {
+        console.error('Backend connection test failed:', error);
+        setConnectionStatus('error');
+      }
+    };
+    testConnection();
+  }, []);
+
+  // Function to validate form
+  const validateForm = () => {
+    setError('');
+    setFieldErrors({
+      email: '',
+      password: ''
+    });
+
+    let isValid = true;
+    const newFieldErrors = {
+      email: '',
+      password: ''
+    };
+
+    // Check email
+    if (!email.trim()) {
+      newFieldErrors.email = 'Email is required';
+      isValid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newFieldErrors.email = 'Please enter a valid email address';
+      isValid = false;
+    }
+
+    // Check password
+    if (!password.trim()) {
+      newFieldErrors.password = 'Password is required';
+      isValid = false;
+    }
+
+    setFieldErrors(newFieldErrors);
+    
+    if (!isValid) {
+      setError('Please fix the errors below to continue');
+    }
+    
+    return isValid;
+  };
+
+  // Function to handle input changes
+  const handleInputChange = (field: 'email' | 'password', value: string) => {
+    if (field === 'email') {
+      setEmail(value);
+    } else {
+      setPassword(value);
+    }
+
+    // Clear field error when user starts typing
+    if (fieldErrors[field]) {
+      setFieldErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
+
+    // Clear general error when user starts typing
+    if (error) {
+      setError('');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
 
     try {
+      // Try unified login first, fallback to legacy endpoints
       let response;
-      if (loginType === 'organization') {
-        response = await authAPI.organizationLogin({ email, password });
-      } else {
-        response = await authAPI.storeLogin({ email, password });
+      let token, user;
+      
+      try {
+        console.log('Attempting unified login...');
+        response = await authAPI.login({ email, password });
+        console.log('Unified login response:', response.data);
+        
+        // Unified login response structure
+        if (response.data.status === 'success' && response.data.data) {
+          token = response.data.data.token;
+          user = response.data.data.user;
+        } else {
+          throw new Error('Invalid response structure');
+        }
+      } catch (unifiedError) {
+        console.log('Unified login failed, trying legacy endpoints...', unifiedError);
+        
+        // Fallback to legacy login endpoints
+        if (loginType === 'organization') {
+          response = await authAPI.organizationLogin({ email, password });
+          console.log('Organization login response:', response.data);
+          // Legacy response structure
+          token = response.data.token;
+          user = response.data.user;
+        } else {
+          response = await authAPI.storeLogin({ email, password });
+          console.log('Store login response:', response.data);
+          // Legacy response structure
+          token = response.data.token;
+          user = response.data.user;
+        }
       }
       
-      const { token, user } = response.data;
+      if (!token || !user) {
+        throw new Error('Invalid login response: missing token or user data');
+      }
+      
       localStorage.setItem('token', token);
       onLogin(user, token);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed');
+      console.error('Login error:', err);
+      console.error('Error response:', err.response);
+      
+      let errorMessage = 'Login failed';
+      if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
+
+  // Show signup component if signup is selected
+  if (showSignup) {
+    return <SignupSelector onBackToLogin={() => setShowSignup(false)} />;
+  }
+
+  // Show forgot password component if forgot password is selected
+  if (showForgotPassword) {
+    return <ForgotPassword 
+      onBackToLogin={() => setShowForgotPassword(false)} 
+      onRedirectToReset={() => {}} // Not used in proper email flow
+    />;
+  }
 
   return (
     <div style={{ 
@@ -104,7 +258,8 @@ const LoginSelector: React.FC<LoginSelectorProps> = ({ onLogin }) => {
           background: '#f8f9fa', 
           borderRadius: '8px', 
           padding: '4px', 
-          marginBottom: '30px' 
+          marginBottom: '30px',
+          gap: '4px'
         }}>
           <button
             type="button"
@@ -159,21 +314,33 @@ const LoginSelector: React.FC<LoginSelectorProps> = ({ onLogin }) => {
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => handleInputChange('email', e.target.value)}
               placeholder="Enter your email"
-              required
               style={{ 
                 width: '100%', 
                 padding: '14px 16px', 
-                border: '2px solid #e1e5e9', 
+                border: fieldErrors.email ? '2px solid #dc2626' : '2px solid #e1e5e9', 
                 borderRadius: '8px', 
                 fontSize: '16px',
                 transition: 'border-color 0.2s ease',
                 boxSizing: 'border-box'
               }}
-              onFocus={(e) => e.target.style.borderColor = '#6c3fc5'}
-              onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
+              onFocus={(e) => e.target.style.borderColor = fieldErrors.email ? '#dc2626' : '#6c3fc5'}
+              onBlur={(e) => e.target.style.borderColor = fieldErrors.email ? '#dc2626' : '#e1e5e9'}
             />
+            {fieldErrors.email && (
+              <div style={{ 
+                fontSize: '12px', 
+                color: '#dc2626', 
+                marginTop: '4px',
+                fontWeight: '500',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                ⚠️ {fieldErrors.email}
+              </div>
+            )}
           </div>
 
           <div style={{ marginBottom: '25px' }}>
@@ -189,34 +356,48 @@ const LoginSelector: React.FC<LoginSelectorProps> = ({ onLogin }) => {
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => handleInputChange('password', e.target.value)}
               placeholder="Enter your password"
-              required
               style={{ 
                 width: '100%', 
                 padding: '14px 16px', 
-                border: '2px solid #e1e5e9', 
+                border: fieldErrors.password ? '2px solid #dc2626' : '2px solid #e1e5e9', 
                 borderRadius: '8px', 
                 fontSize: '16px',
                 transition: 'border-color 0.2s ease',
                 boxSizing: 'border-box'
               }}
-              onFocus={(e) => e.target.style.borderColor = '#6c3fc5'}
-              onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
+              onFocus={(e) => e.target.style.borderColor = fieldErrors.password ? '#dc2626' : '#6c3fc5'}
+              onBlur={(e) => e.target.style.borderColor = fieldErrors.password ? '#dc2626' : '#e1e5e9'}
             />
+            {fieldErrors.password && (
+              <div style={{ 
+                fontSize: '12px', 
+                color: '#dc2626', 
+                marginTop: '4px',
+                fontWeight: '500',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                ⚠️ {fieldErrors.password}
+              </div>
+            )}
           </div>
 
           {error && (
             <div style={{ 
-              background: '#fee', 
-              color: '#c53030', 
-              padding: '12px', 
-              borderRadius: '6px', 
+              background: '#fef2f2', 
+              border: '1px solid #fecaca',
+              color: '#dc2626', 
+              padding: '12px 16px', 
+              borderRadius: '8px', 
               marginBottom: '20px',
               fontSize: '14px',
-              textAlign: 'center'
+              textAlign: 'center',
+              fontWeight: '500'
             }}>
-              {error}
+              ⚠️ {error}
             </div>
           )}
 
@@ -234,12 +415,53 @@ const LoginSelector: React.FC<LoginSelectorProps> = ({ onLogin }) => {
               fontWeight: '600',
               cursor: loading ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s ease',
-              marginBottom: '20px'
+              marginBottom: '15px'
             }}
           >
             {loading ? 'Signing In...' : `Sign In as ${loginType === 'organization' ? 'Organization Admin' : 'Store User'}`}
           </button>
         </form>
+
+        {/* Forgot Password Link */}
+        <div style={{ textAlign: 'center', marginBottom: '15px' }}>
+          <button
+            type="button"
+            onClick={() => setShowForgotPassword(true)}
+            style={{
+              background: 'transparent',
+              color: '#6c3fc5',
+              border: 'none',
+              fontSize: '14px',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              fontWeight: '500'
+            }}
+          >
+            Forgot your password?
+          </button>
+        </div>
+
+        {/* Signup Link */}
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <span style={{ color: '#666', fontSize: '14px' }}>
+            Don't have an account?{' '}
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowSignup(true)}
+            style={{
+              background: 'transparent',
+              color: '#6c3fc5',
+              border: 'none',
+              fontSize: '14px',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              fontWeight: '600'
+            }}
+          >
+            Sign up here
+          </button>
+        </div>
 
         {/* Demo Credentials */}
         <div style={{ 

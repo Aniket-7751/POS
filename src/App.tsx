@@ -4,6 +4,7 @@ import './App.css';
 
 import POSInterface from './pages/POSInterface';
 import LoginSelector from './components/LoginSelector';
+import ResetPassword from './components/ResetPassword';
 
 import OrganizationModule from './modules/organization/OrganizationModule';
 import StoreModule from './modules/store/StoreModule';
@@ -26,6 +27,7 @@ function App() {
   const [page, setPage] = React.useState<Page>('pos');
   const [user, setUser] = React.useState<User | null>(null);
   const [token, setToken] = React.useState<string | null>(localStorage.getItem('token'));
+  const [resetToken, setResetToken] = React.useState<string | null>(null);
 
   // Set document title
   React.useEffect(() => {
@@ -37,9 +39,29 @@ function App() {
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
     
+    // Clear any corrupted data first
+    if (storedUser === 'undefined' || storedUser === 'null') {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userType');
+      return;
+    }
+    
     if (storedToken && storedUser) {
       setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error('Error parsing stored user data:', error);
+        // Clear invalid data
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('userType');
+      }
     }
   }, []);
 
@@ -62,6 +84,60 @@ function App() {
     localStorage.removeItem('userRole');
     localStorage.removeItem('userType');
   };
+
+  // Check for reset password token in URL
+  React.useEffect(() => {
+    console.log('Current URL:', window.location.href);
+    console.log('Current search params:', window.location.search);
+    console.log('Current pathname:', window.location.pathname);
+    
+    let resetToken = null;
+    
+    // Try to get token from query parameters first
+    const urlParams = new URLSearchParams(window.location.search);
+    resetToken = urlParams.get('token');
+    
+    // If not found in query params, try to extract from pathname
+    if (!resetToken && window.location.pathname.includes('/reset-password')) {
+      const pathParams = new URLSearchParams(window.location.pathname.split('?')[1] || '');
+      resetToken = pathParams.get('token');
+    }
+    
+    console.log('Extracted token:', resetToken);
+    
+    if (resetToken) {
+      console.log('Reset token found in URL:', resetToken);
+      // Store the token for the reset password component
+      localStorage.setItem('resetToken', resetToken);
+      setResetToken(resetToken);
+      // Clean up the URL - redirect to root
+      window.history.replaceState({}, document.title, '/');
+      console.log('Token stored in localStorage');
+    } else {
+      // Check if token exists in localStorage (for page refresh)
+      const storedToken = localStorage.getItem('resetToken');
+      if (storedToken && storedToken !== 'null' && storedToken !== 'undefined') {
+        console.log('Reset token found in localStorage:', storedToken);
+        setResetToken(storedToken);
+      }
+      console.log('No token found in URL');
+    }
+  }, []);
+
+  // Show reset password if token is present
+  if (resetToken && (!user || !token)) {
+    return (
+      <ResetPassword 
+        token={resetToken} 
+        onSuccess={() => {
+          console.log('Reset password success callback called');
+          localStorage.removeItem('resetToken');
+          setResetToken(null);
+          // Force re-render to show login page
+        }} 
+      />
+    );
+  }
 
   // Show login if not authenticated
   if (!user || !token) {
