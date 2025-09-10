@@ -138,45 +138,26 @@ const LoginSelector: React.FC<LoginSelectorProps> = ({ onLogin }) => {
     setLoading(true);
 
     try {
-      // Try unified login first, fallback to legacy endpoints
+      // Enforce ID+Email+Password login per type
       let response;
       let token, user;
-      
-      try {
-        console.log('Attempting unified login...');
-        response = await authAPI.login({ email, password });
-        console.log('Unified login response:', response.data);
-        
-        // Unified login response structure
-        if (response.data.status === 'success' && response.data.data) {
-          token = response.data.data.token;
-          user = response.data.data.user;
-        } else {
-          throw new Error('Invalid response structure');
-        }
-      } catch (unifiedError) {
-        console.log('Unified login failed, trying legacy endpoints...', unifiedError);
-        
-        // Fallback to legacy login endpoints
-        if (loginType === 'organization') {
-          response = await authAPI.organizationLogin({ organizationId, email, password });
-          console.log('Organization login response:', response.data);
-          // Legacy response structure
-          token = response.data.token;
-          user = response.data.user;
-        } else {
-          response = await authAPI.storeLogin({ storeId, email, password });
-          console.log('Store login response:', response.data);
-          // Legacy response structure
-          token = response.data.token;
-          user = response.data.user;
-        }
+
+      if (loginType === 'organization') {
+        response = await authAPI.organizationLogin({ organizationId, email, password });
+        console.log('Organization login response:', response.data);
+        token = response.data.token;
+        user = response.data.user;
+      } else {
+        response = await authAPI.storeLogin({ storeId, email, password });
+        console.log('Store login response:', response.data);
+        token = response.data.token;
+        user = response.data.user;
       }
-      
+
       if (!token || !user) {
         throw new Error('Invalid login response: missing token or user data');
       }
-      
+
       localStorage.setItem('token', token);
       onLogin(user, token);
     } catch (err: any) {
