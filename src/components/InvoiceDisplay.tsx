@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-interface BillItem {
+interface InvoiceItem {
   sku: string;
   itemName: string;
   quantity: number;
@@ -18,10 +18,10 @@ interface CustomerDetails {
   email?: string;
 }
 
-interface BillData {
-  billNo: string;
+interface InvoiceData {
+  invoiceNo: string;
   transactionId: string;
-  items: BillItem[];
+  items: InvoiceItem[];
   totalAmount: number;
   paymentMode: 'cash' | 'card' | 'UPI';
   dateTime: string;
@@ -32,15 +32,63 @@ interface BillData {
   organizationAddress?: string;
   gstNumber?: string;
   phoneNumber?: string;
+  status?: string;
+  dueDate?: string;
 }
 
-interface BillDisplayProps {
-  billData: BillData;
+interface InvoiceDisplayProps {
+  invoiceData: InvoiceData;
   onClose: () => void;
 }
 
-const BillDisplay: React.FC<BillDisplayProps> = ({ billData, onClose }) => {
-  const billRef = useRef<HTMLDivElement>(null);
+const InvoiceDisplay: React.FC<InvoiceDisplayProps> = ({ invoiceData, onClose }) => {
+  const invoiceRef = useRef<HTMLDivElement>(null);
+
+  // // Debug logging
+  // console.log('InvoiceDisplay received data:', {
+  //   storeName: invoiceData?.storeName,
+  //   storeAddress: invoiceData?.storeAddress,
+  //   organizationName: invoiceData?.organizationName,
+  //   gstNumber: invoiceData?.gstNumber,
+  //   phoneNumber: invoiceData?.phoneNumber
+  // });
+
+  // Safety check for invoiceData
+  if (!invoiceData) {
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000
+      }}>
+        <div style={{
+          background: 'white',
+          padding: '20px',
+          borderRadius: '8px',
+          textAlign: 'center'
+        }}>
+          <p>No invoice data available</p>
+          <button onClick={onClose} style={{
+            padding: '8px 16px',
+            background: '#6c757d',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}>
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -74,22 +122,25 @@ const BillDisplay: React.FC<BillDisplayProps> = ({ billData, onClose }) => {
   };
 
   const calculateSubTotal = () => {
-    return billData.items.reduce((sum, item) => sum + (item.quantity * item.pricePerUnit), 0);
+    if (!invoiceData.items || !Array.isArray(invoiceData.items)) return 0;
+    return invoiceData.items.reduce((sum, item) => sum + (item.quantity * item.pricePerUnit), 0);
   };
 
   const calculateGSTTotal = () => {
-    return billData.items.reduce((sum, item) => sum + item.gst, 0);
+    if (!invoiceData.items || !Array.isArray(invoiceData.items)) return 0;
+    return invoiceData.items.reduce((sum, item) => sum + item.gst, 0);
   };
 
   const calculateDiscountTotal = () => {
-    return billData.items.reduce((sum, item) => sum + item.discount, 0);
+    if (!invoiceData.items || !Array.isArray(invoiceData.items)) return 0;
+    return invoiceData.items.reduce((sum, item) => sum + item.discount, 0);
   };
 
   const downloadPDF = async () => {
-    if (!billRef.current) return;
+    if (!invoiceRef.current) return;
 
     try {
-      const canvas = await html2canvas(billRef.current, {
+      const canvas = await html2canvas(invoiceRef.current, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
@@ -116,10 +167,112 @@ const BillDisplay: React.FC<BillDisplayProps> = ({ billData, onClose }) => {
         heightLeft -= pageHeight;
       }
 
-      pdf.save(`Bill-${billData.billNo}.pdf`);
+      pdf.save(`Invoice-${invoiceData.invoiceNo}.pdf`);
     } catch (error) {
-      // console.error('Error generating PDF:', error);
+      console.error('Error generating PDF:', error);
       alert('Failed to generate PDF. Please try again.');
+    }
+  };
+
+  const printInvoice = () => {
+    if (!invoiceRef.current) return;
+    
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Invoice ${invoiceData.invoiceNo}</title>
+            <style>
+              body { 
+                font-family: Arial, sans-serif; 
+                margin: 0; 
+                padding: 20px; 
+                background: white;
+              }
+              .invoice-container {
+                max-width: 500px;
+                margin: 0 auto;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                padding: 20px;
+              }
+              .header { text-align: center; margin-bottom: 20px; }
+              .company-name { 
+                margin: 0 0 8px 0; 
+                color: #e53e3e; 
+                font-size: 24px;
+                font-weight: bold;
+              }
+              .company-details { 
+                margin: 0 0 4px 0; 
+                color: #666; 
+                font-size: 14px; 
+              }
+              .invoice-details { 
+                display: flex; 
+                justify-content: space-between; 
+                margin-bottom: 20px;
+                font-size: 14px;
+              }
+              .customer-details { 
+                margin-bottom: 20px; 
+                font-size: 14px; 
+              }
+              .items-table { 
+                width: 100%; 
+                border-collapse: collapse;
+                font-size: 12px;
+                margin-bottom: 20px;
+              }
+              .items-table th, .items-table td { 
+                border: 1px solid #ddd; 
+                padding: 8px; 
+                text-align: left; 
+              }
+              .items-table th { background: #f8f9fa; }
+              .items-table .text-right { text-align: right; }
+              .items-table .text-center { text-align: center; }
+              .totals { 
+                border-top: 2px solid #e53e3e; 
+                padding-top: 10px;
+                font-size: 14px;
+              }
+              .total-row { 
+                display: flex; 
+                justify-content: space-between; 
+                margin-bottom: 4px; 
+              }
+              .grand-total { 
+                display: flex; 
+                justify-content: space-between; 
+                font-weight: bold;
+                font-size: 16px;
+                color: #e53e3e;
+                border-top: 1px solid #ddd;
+                padding-top: 8px;
+              }
+              .footer { 
+                text-align: center; 
+                margin-top: 20px;
+                font-size: 12px;
+                color: #666;
+              }
+              @media print {
+                body { margin: 0; padding: 0; }
+                .invoice-container { border: none; box-shadow: none; }
+              }
+            </style>
+          </head>
+          <body>
+            ${invoiceRef.current.innerHTML}
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
     }
   };
 
@@ -155,7 +308,7 @@ const BillDisplay: React.FC<BillDisplayProps> = ({ billData, onClose }) => {
           alignItems: 'center'
         }}>
           <h2 style={{ margin: 0, color: '#1a1a1a' }}>
-            🧾 Bill Generated Successfully
+            🧾 Invoice Generated Successfully
           </h2>
           <button
             onClick={onClose}
@@ -171,9 +324,9 @@ const BillDisplay: React.FC<BillDisplayProps> = ({ billData, onClose }) => {
           </button>
         </div>
 
-        {/* Bill Content */}
+        {/* Invoice Content */}
         <div style={{ padding: '24px' }}>
-          <div ref={billRef} style={{
+          <div ref={invoiceRef} style={{
             background: 'white',
             padding: '20px',
             border: '1px solid #ddd',
@@ -182,7 +335,7 @@ const BillDisplay: React.FC<BillDisplayProps> = ({ billData, onClose }) => {
             maxWidth: '500px',
             margin: '0 auto'
           }}>
-            {/* Bill Header */}
+            {/* Invoice Header */}
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
               <h1 style={{ 
                 margin: '0 0 8px 0', 
@@ -192,28 +345,25 @@ const BillDisplay: React.FC<BillDisplayProps> = ({ billData, onClose }) => {
               }}>
                 SUGUNA CHICKEN
               </h1>
-              <p style={{ margin: '0 0 4px 0', color: '#666', fontSize: '14px' }}>
-                {billData.organizationName || 'Organization Name'}
+              <p style={{ margin: '0 0 4px 0', color: '#666', fontSize: '12px' }}>
+                {invoiceData.storeName || 'Store Name'}
               </p>
               <p style={{ margin: '0 0 4px 0', color: '#666', fontSize: '12px' }}>
-                {billData.storeName || 'Store Name'}
+                {invoiceData.storeAddress || 'Store Address'}
               </p>
-              <p style={{ margin: '0 0 4px 0', color: '#666', fontSize: '12px' }}>
-                {billData.storeAddress || 'Store Address'}
-              </p>
-              {billData.gstNumber && (
+              {invoiceData.gstNumber && (
                 <p style={{ margin: '0 0 4px 0', color: '#666', fontSize: '12px' }}>
-                  GST: {billData.gstNumber}
+                  GST: {invoiceData.gstNumber}
                 </p>
               )}
-              {billData.phoneNumber && (
+              {invoiceData.phoneNumber && (
                 <p style={{ margin: '0', color: '#666', fontSize: '12px' }}>
-                  Phone: {billData.phoneNumber}
+                  Phone: {invoiceData.phoneNumber}
                 </p>
               )}
             </div>
 
-            {/* Bill Details */}
+            {/* Invoice Details */}
             <div style={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
@@ -221,25 +371,31 @@ const BillDisplay: React.FC<BillDisplayProps> = ({ billData, onClose }) => {
               fontSize: '14px'
             }}>
               <div>
-                <p style={{ margin: '0 0 4px 0' }}><strong>Bill No:</strong> {billData.billNo}</p>
-                <p style={{ margin: '0' }}><strong>Date:</strong> {formatDateTime(billData.dateTime)}</p>
+                <p style={{ margin: '0 0 4px 0' }}><strong>Invoice No:</strong> {invoiceData.invoiceNo}</p>
+                <p style={{ margin: '0' }}><strong>Date:</strong> {formatDateTime(invoiceData.dateTime)}</p>
+                {invoiceData.dueDate && (
+                  <p style={{ margin: '0' }}><strong>Due Date:</strong> {formatDateTime(invoiceData.dueDate)}</p>
+                )}
               </div>
               <div>
-                <p style={{ margin: '0 0 4px 0' }}><strong>Transaction ID:</strong> {billData.transactionId}</p>
-                <p style={{ margin: '0' }}><strong>Payment:</strong> {getPaymentMethodIcon(billData.paymentMode)} {billData.paymentMode.toUpperCase()}</p>
+                <p style={{ margin: '0 0 4px 0' }}><strong>Transaction ID:</strong> {invoiceData.transactionId}</p>
+                <p style={{ margin: '0 0 4px 0' }}><strong>Payment:</strong> {getPaymentMethodIcon(invoiceData.paymentMode)} {invoiceData.paymentMode?.toUpperCase() || 'N/A'}</p>
+                {invoiceData.status && (
+                  <p style={{ margin: '0' }}><strong>Status:</strong> {invoiceData.status.toUpperCase()}</p>
+                )}
               </div>
             </div>
 
             {/* Customer Details */}
-            {billData.customerDetails?.name && (
+            {invoiceData.customerDetails?.name && (
               <div style={{ marginBottom: '20px', fontSize: '14px' }}>
-                <h3 style={{ margin: '0 0 8px 0', fontSize: '16px' }}>Customer Details</h3>
-                <p style={{ margin: '0 0 4px 0' }}><strong>Name:</strong> {billData.customerDetails.name}</p>
-                {billData.customerDetails.phone && (
-                  <p style={{ margin: '0 0 4px 0' }}><strong>Phone:</strong> {billData.customerDetails.phone}</p>
+                <h3 style={{ margin: '0 0 8px 0', fontSize: '16px' }}>Bill To:</h3>
+                <p style={{ margin: '0 0 4px 0' }}><strong>Name:</strong> {invoiceData.customerDetails.name}</p>
+                {invoiceData.customerDetails.phone && (
+                  <p style={{ margin: '0 0 4px 0' }}><strong>Phone:</strong> {invoiceData.customerDetails.phone}</p>
                 )}
-                {billData.customerDetails.email && (
-                  <p style={{ margin: '0' }}><strong>Email:</strong> {billData.customerDetails.email}</p>
+                {invoiceData.customerDetails.email && (
+                  <p style={{ margin: '0' }}><strong>Email:</strong> {invoiceData.customerDetails.email}</p>
                 )}
               </div>
             )}
@@ -261,7 +417,7 @@ const BillDisplay: React.FC<BillDisplayProps> = ({ billData, onClose }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {billData.items.map((item, index) => (
+                  {invoiceData.items && Array.isArray(invoiceData.items) ? invoiceData.items.map((item, index) => (
                     <tr key={index}>
                       <td style={{ border: '1px solid #ddd', padding: '8px' }}>
                         <div>
@@ -282,7 +438,13 @@ const BillDisplay: React.FC<BillDisplayProps> = ({ billData, onClose }) => {
                         {formatCurrency(item.totalAmount)}
                       </td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan={5} style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+                        No items found
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -315,7 +477,7 @@ const BillDisplay: React.FC<BillDisplayProps> = ({ billData, onClose }) => {
                 paddingTop: '8px'
               }}>
                 <span>Grand Total:</span>
-                <span>{formatCurrency(billData.totalAmount)}</span>
+                <span>{formatCurrency(invoiceData.totalAmount)}</span>
               </div>
             </div>
 
@@ -338,6 +500,24 @@ const BillDisplay: React.FC<BillDisplayProps> = ({ billData, onClose }) => {
             justifyContent: 'center',
             marginTop: '20px'
           }}>
+            <button
+              onClick={printInvoice}
+              style={{
+                padding: '12px 24px',
+                background: '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              🖨️ Print Invoice
+            </button>
             <button
               onClick={downloadPDF}
               style={{
@@ -378,4 +558,4 @@ const BillDisplay: React.FC<BillDisplayProps> = ({ billData, onClose }) => {
   );
 };
 
-export default BillDisplay;
+export default InvoiceDisplay;

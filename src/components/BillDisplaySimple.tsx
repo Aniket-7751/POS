@@ -39,7 +39,7 @@ interface BillDisplaySimpleProps {
 
 const BillDisplaySimple: React.FC<BillDisplaySimpleProps> = ({ billData, onClose }) => {
   // Debug logging
-  console.log('BillDisplaySimple received billData:', billData);
+  // console.log('BillDisplaySimple received billData:', billData);
   
   // Safety check for billData
   if (!billData) {

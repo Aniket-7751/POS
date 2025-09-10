@@ -98,7 +98,7 @@ const NoticeHeader: React.FC<NoticeHeaderProps> = ({
   };
 
   const handleClose = (noticeId: string) => {
-    console.log('Close button clicked for notice:', noticeId);
+    // console.log('Close button clicked for notice:', noticeId);
     if (onClose) {
       onClose(noticeId);
     } else {
@@ -187,7 +187,7 @@ const NoticeHeader: React.FC<NoticeHeaderProps> = ({
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('Close button clicked!');
+            // console.log('Close button clicked!');
             handleClose(currentNotice.id);
           }}
           style={{

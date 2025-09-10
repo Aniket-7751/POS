@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { createCatalogue, updateCatalogue, buildFormData, fileToBase64 } from './catalogueApi';
 import { getCategories } from '../category/categoryApi';
@@ -26,7 +25,7 @@ const initialState: Catalogue = {
   image: '',
   thumbnail: '',
   instructions: '',
-  expiry: 0,
+  expiry: '', // expiry as string
   organizationId: '',
 };
 
@@ -48,6 +47,8 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
   const [volumeUnit, setVolumeUnit] = useState('');
   const [barcodeType, setBarcodeType] = useState<'12' | '16'>('12');
   const [generatedBarcode, setGeneratedBarcode] = useState('');
+  const [expiryValue, setExpiryValue] = useState('');
+  const [expiryUnit, setExpiryUnit] = useState<'hours' | 'days'>('hours');
 
   useEffect(() => {
     if (editData) {
@@ -60,6 +61,14 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
           setVolumeUnit(volumeMatch[2].toLowerCase());
         }
       }
+      // Parse expiry string (e.g., '2 days')
+      if (editData.expiry && typeof editData.expiry === 'string') {
+        const expiryMatch = editData.expiry.match(/^(\d+)\s*(hours|days)$/i);
+        if (expiryMatch) {
+          setExpiryValue(expiryMatch[1]);
+          setExpiryUnit(expiryMatch[2].toLowerCase() as 'hours' | 'days');
+        }
+      }
     }
   }, [editData]);
 
@@ -70,8 +79,8 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
           getCategories(),
           getOrganizations()
         ]);
-        setCategories(categoriesRes.data);
-        setOrganizations(organizationsRes.data);
+  setCategories(categoriesRes.data as Category[]);
+  setOrganizations(organizationsRes.data as Organization[]);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -85,6 +94,15 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
       setForm(prev => ({ ...prev, volumeOfMeasurement: `${volumeValue} ${volumeUnit}` }));
     }
   }, [volumeValue, volumeUnit]);
+
+  // Update expiry when expiryValue or expiryUnit changes
+  useEffect(() => {
+    if (expiryValue && expiryUnit) {
+      setForm(prev => ({ ...prev, expiry: `${expiryValue} ${expiryUnit}` }));
+    } else {
+      setForm(prev => ({ ...prev, expiry: '' }));
+    }
+  }, [expiryValue, expiryUnit]);
 
   // Generate barcode when SKU, price, or volume changes
   useEffect(() => {
@@ -107,21 +125,43 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
     }
   }, [form.sku, form.price, volumeValue, volumeUnit, barcodeType]);
 
+  const [fieldErrors, setFieldErrors] = React.useState({
+    itemId: '',
+    sku: '',
+    categoryId: '',
+  });
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    if (name === 'expiry' || name === 'price' || name === 'stock') {
-      setForm({ ...form, [name]: Number(value) });
+    let newValue = value;
+    let errorMsg = '';
+
+    if (name === 'itemId' || name === 'sku' || name === 'categoryId') {
+      if (/[^a-zA-Z0-9]/.test(value)) {
+        errorMsg = 'Special characters not allowed';
+        newValue = value.replace(/[^a-zA-Z0-9]/g, '');
+      }
+      setFieldErrors(prev => ({ ...prev, [name]: errorMsg }));
+    }
+
+    if (name === 'expiry') {
+      // Only allow positive integers
+      if (/^\d*$/.test(value)) {
+        setExpiryValue(newValue);
+      }
+    } else if (name === 'expiryUnit') {
+      setExpiryUnit(newValue as 'hours' | 'days');
     } else if (name.startsWith('nutritionValue.')) {
       const nutritionField = name.split('.')[1];
-      setForm({ 
-        ...form, 
-        nutritionValue: { 
-          ...form.nutritionValue, 
-          [nutritionField]: Number(value) 
-        } 
+      setForm({
+        ...form,
+        nutritionValue: {
+          ...form.nutritionValue,
+          [nutritionField]: Number(newValue)
+        }
       });
     } else {
-      setForm({ ...form, [name]: value });
+      setForm({ ...form, [name]: newValue });
     }
   };
 
@@ -147,6 +187,18 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
       setError('Please fill all required fields (SKU, Item Name, Volume Value, Volume Unit, Category, Organization)');
       return false;
     }
+    if (!/^[a-zA-Z0-9]+$/.test(form.itemId)) {
+      setFieldErrors(prev => ({ ...prev, itemId: 'Special characters not allowed' }));
+      return false;
+    }
+    if (!/^[a-zA-Z0-9]+$/.test(form.sku)) {
+      setFieldErrors(prev => ({ ...prev, sku: 'Special characters not allowed' }));
+      return false;
+    }
+    if (!/^[a-zA-Z0-9]+$/.test(form.categoryId)) {
+      setFieldErrors(prev => ({ ...prev, categoryId: 'Special characters not allowed' }));
+      return false;
+    }
     setError('');
     return true;
   };
@@ -169,6 +221,7 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
 
       // Prefer base64 payload so it works across machines without shared disk
       let payload: any = { ...form };
+      // expiry is already a string in form state (e.g., '2 days' or '')
       if (image) {
         payload.image = await fileToBase64(image);
       }
@@ -176,24 +229,22 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
         payload.thumbnail = await fileToBase64(thumbnail);
       }
 
-    if (editId) {
-        console.log('Updating catalogue with base64 (if provided)...');
+      if (editId) {
         await updateCatalogue(editId, payload);
-    } else {
-        console.log('Creating catalogue with base64 (if provided)...');
+      } else {
         await createCatalogue(payload);
-    }
-      
-      console.log('Catalogue saved successfully, calling onBack...');
-    setForm(initialState);
+      }
+
+      setForm(initialState);
       setImage(null);
       setThumbnail(null);
       setVolumeValue('');
       setVolumeUnit('');
+      setExpiryValue('');
+      setExpiryUnit('hours');
       setError('');
-    onBack();
+      onBack();
     } catch (error) {
-      console.error('Error saving catalogue:', error);
       setError('Failed to save catalogue. Please try again.');
     }
   };
@@ -213,21 +264,23 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
                 <div style={{ fontWeight: 700, fontSize: 22, marginBottom: 24 }}>Catalogue Information</div>
                 <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
                   <div style={{ flex: 1 }}>
-                    <label>Item ID *</label>
+                    <label>Item ID <span style={{ color: 'red' }}>*</span></label>
                     <input name="itemId" value={form.itemId} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    {fieldErrors.itemId && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.itemId}</div>}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label>SKU *</label>
+                    <label>SKU <span style={{ color: 'red' }}>*</span></label>
                     <input name="sku" value={form.sku} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    {fieldErrors.sku && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.sku}</div>}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
                   <div style={{ flex: 1 }}>
-                    <label>Item Name *</label>
+                    <label>Item Name <span style={{ color: 'red' }}>*</span></label>
                     <input name="itemName" value={form.itemName} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label>Category *</label>
+                    <label>Category <span style={{ color: 'red' }}>*</span></label>
                     <select name="categoryId" value={form.categoryId} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}>
                       <option value="">Select a category</option>
                       {categories.map(category => (
@@ -236,11 +289,12 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
                         </option>
                       ))}
                     </select>
+                    {fieldErrors.categoryId && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.categoryId}</div>}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
                   <div style={{ flex: 1 }}>
-                    <label>Volume of Measurement *</label>
+                    <label>Volume of Measurement <span style={{ color: 'red' }}>*</span></label>
                     <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                       <input 
                         name="volumeValue" 
@@ -272,12 +326,27 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
                 </div>
                 <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
                   <div style={{ flex: 1 }}>
-                    <label>Price *</label>
-                    <input name="price" type="number" value={form.price} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    <label>Price <span style={{ color: 'red' }}>*</span></label>
+                    <input 
+                      name="price" 
+                      type="number" 
+                      value={form.price || ''} 
+                      onChange={handleChange} 
+                      required 
+                      min="0"
+                      style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} 
+                    />
                   </div>
                   <div style={{ flex: 1 }}>
                     <label>Stock</label>
-                    <input name="stock" type="number" value={form.stock} onChange={handleChange} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    <input 
+                      name="stock" 
+                      type="number" 
+                      value={form.stock || ''} 
+                      onChange={handleChange} 
+                      min="0"
+                      style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} 
+                    />
                   </div>
                 </div>
                 <div style={{ marginBottom: 16 }}>
@@ -290,14 +359,14 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
                 </div>
                 <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
                   <div style={{ flex: 1 }}>
-                    <label>Status *</label>
+                    <label>Status <span style={{ color: 'red' }}>*</span></label>
                     <select name="status" value={form.status} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}>
                       <option value="active">Active</option>
                       <option value="inactive">Inactive</option>
                     </select>
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label>Organization *</label>
+                    <label>Organization <span style={{ color: 'red' }}>*</span></label>
                     <select name="organizationId" value={form.organizationId || ''} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}>
                       <option value="">Select an organization</option>
                       {organizations.map(org => (
@@ -308,9 +377,29 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
                     </select>
                   </div>
                 </div>
+                {/* Expiry input field */}
                 <div style={{ marginBottom: 16 }}>
-                  <label>Expiry (in hours)</label>
-                  <input name="expiry" type="number" value={form.expiry} onChange={handleChange} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                  <label>Expiry</label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input
+                      name="expiry"
+                      type="number"
+                      value={expiryValue}
+                      onChange={handleChange}
+                      min="0"
+                      placeholder="Enter value"
+                      style={{ flex: 2, padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}
+                    />
+                    <select
+                      name="expiryUnit"
+                      value={expiryUnit}
+                      onChange={handleChange}
+                      style={{ flex: 1, padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}
+                    >
+                      <option value="hours">Hours</option>
+                      <option value="days">Days</option>
+                    </select>
+                  </div>
                 </div>
                 
                 {/* Nutrition Value Section */}
@@ -458,7 +547,7 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
                 {error && <div style={{ color: 'red', marginBottom: 16 }}>{error}</div>}
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginTop: 32 }}>
                   <button type="button" onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: '#6c3fc5', fontWeight: 600, fontSize: 16, cursor: 'pointer' }}>Previous</button>
-                  <button type="submit" style={{ background: '#6c3fc5', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 16, padding: '10px 32px', cursor: 'pointer' }}>{editId ? 'Update' : 'Upload'}</button>
+                  <button type="submit" style={{ background: '#6c3fc5', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 16, padding: '10px 32px', cursor: 'pointer' }}>{editId ? 'Update Catalogue' : 'Upload Catalogue'}</button>
                 </div>
               </>
             )}

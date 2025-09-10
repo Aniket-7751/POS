@@ -19,13 +19,40 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Add response interceptor for debugging
+api.interceptors.response.use(
+  (response) => {
+    console.log('API Response:', response.config.url, response.data);
+    return response;
+  },
+  (error) => {
+    console.error('API Error:', error.config?.url, error.response?.data || error.message);
+    return Promise.reject(error);
+  }
+);
+
 // Auth API
 export const authAPI = {
+  // Unified login
+  login: (data: { email: string; password: string }) => api.post('/auth/login', data),
+  
+  // Signup endpoints
+  organizationSignup: (data: { organizationId: string; email: string; password: string }) => api.post('/auth/organization/signup', data),
+  storeSignup: (data: { storeId: string; email: string; password: string }) => api.post('/auth/store/signup', data),
+  
+  // Legacy login endpoints (keeping for backward compatibility)
   organizationLogin: (data: { email: string; password: string }) => api.post('/auth/organization/login', data),
   storeLogin: (data: { email: string; password: string }) => api.post('/auth/store/login', data),
+  
+  // Legacy register endpoints (keeping for backward compatibility)
   createOrganizationUser: (data: { name: string; email: string; password: string; organizationId: string; role?: string }) => api.post('/auth/organization/register', data),
   createStoreUser: (data: { name: string; email: string; password: string; storeId: string; role?: string }) => api.post('/auth/store/register', data),
+  
   getProfile: () => api.get('/auth/profile'),
+  
+  // Password reset endpoints
+  forgotPassword: (data: { email: string }) => api.post('/auth/forgot-password', data),
+  resetPassword: (data: { token: string; password: string; confirmPassword: string }) => api.post('/auth/reset-password', data),
 };
 
 // Organization API
@@ -81,12 +108,12 @@ export const salesAPI = {
   getProductByBarcode: (barcode: string) => api.get(`/sales/product/barcode/${barcode}`),
 };
 
-// Billing API
-export const billingAPI = {
-  generateBill: (data: { transactionId: string }) => api.post('/billing/generate', data),
-  getAll: () => api.get('/billing'),
-  getById: (id: string) => api.get(`/billing/${id}`),
-  getByStore: (storeId: string) => api.get(`/billing/store/${storeId}`),
+// Invoice API
+export const invoiceAPI = {
+  generateInvoice: (data: { transactionId: string }) => api.post('/invoices/generate', data),
+  getAll: () => api.get('/invoices'),
+  getById: (id: string) => api.get(`/invoices/${id}`),
+  getByStore: (storeId: string) => api.get(`/invoices/store/${storeId}`),
 };
 
 // Legacy API (for backward compatibility)
