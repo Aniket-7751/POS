@@ -14,7 +14,9 @@ const userSchema = new mongoose.Schema({
     module: { type: String, enum: ['organization', 'store', 'inventory', 'pos', 'reports'] },
     actions: [{ type: String, enum: ['read', 'write', 'delete', 'manage'] }]
   }],
-  status: { type: String, enum: ['active', 'inactive'], default: 'active' }
-}, { timestamps: true, _id: false });
+  status: { type: String, enum: ['active', 'inactive'], default: 'active' },
+  resetPasswordToken: { type: String },
+  resetPasswordExpires: { type: Date }
+},{ timestamps: true, _id: false });
 
 module.exports = mongoose.model('User', userSchema);
