@@ -41,8 +41,8 @@ export const authAPI = {
   storeSignup: (data: { storeId: string; email: string; password: string }) => api.post('/auth/store/signup', data),
   
   // Legacy login endpoints (keeping for backward compatibility)
-  organizationLogin: (data: { email: string; password: string }) => api.post('/auth/organization/login', data),
-  storeLogin: (data: { email: string; password: string }) => api.post('/auth/store/login', data),
+  organizationLogin: (data: { organizationId: string; email: string; password: string }) => api.post('/auth/organization/login', data),
+  storeLogin: (data: { storeId: string; email: string; password: string }) => api.post('/auth/store/login', data),
   
   // Legacy register endpoints (keeping for backward compatibility)
   createOrganizationUser: (data: { name: string; email: string; password: string; organizationId: string; role?: string }) => api.post('/auth/organization/register', data),

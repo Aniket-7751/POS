@@ -10,6 +10,8 @@ interface LoginSelectorProps {
 const LoginSelector: React.FC<LoginSelectorProps> = ({ onLogin }) => {
   const [loginType, setLoginType] = useState<'organization' | 'store'>('organization');
   const [email, setEmail] = useState('');
+  const [organizationId, setOrganizationId] = useState('');
+  const [storeId, setStoreId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,6 +19,8 @@ const LoginSelector: React.FC<LoginSelectorProps> = ({ onLogin }) => {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'error'>('checking');
   const [fieldErrors, setFieldErrors] = useState({
+    organizationId: '',
+    storeId: '',
     email: '',
     password: ''
   });
@@ -49,15 +53,29 @@ const LoginSelector: React.FC<LoginSelectorProps> = ({ onLogin }) => {
   const validateForm = () => {
     setError('');
     setFieldErrors({
+      organizationId: '',
+      storeId: '',
       email: '',
       password: ''
     });
 
     let isValid = true;
     const newFieldErrors = {
+      organizationId: '',
+      storeId: '',
       email: '',
       password: ''
-    };
+    } as any;
+
+    // Require ID per login type
+    if (loginType === 'organization' && !organizationId.trim()) {
+      newFieldErrors.organizationId = 'Organization ID is required';
+      isValid = false;
+    }
+    if (loginType === 'store' && !storeId.trim()) {
+      newFieldErrors.storeId = 'Store ID is required';
+      isValid = false;
+    }
 
     // Check email
     if (!email.trim()) {
@@ -84,15 +102,19 @@ const LoginSelector: React.FC<LoginSelectorProps> = ({ onLogin }) => {
   };
 
   // Function to handle input changes
-  const handleInputChange = (field: 'email' | 'password', value: string) => {
+  const handleInputChange = (field: 'email' | 'password' | 'organizationId' | 'storeId', value: string) => {
     if (field === 'email') {
       setEmail(value);
-    } else {
+    } else if (field === 'password') {
       setPassword(value);
+    } else if (field === 'organizationId') {
+      setOrganizationId(value);
+    } else if (field === 'storeId') {
+      setStoreId(value);
     }
 
     // Clear field error when user starts typing
-    if (fieldErrors[field]) {
+    if ((fieldErrors as any)[field]) {
       setFieldErrors(prev => ({
         ...prev,
         [field]: ''
@@ -137,13 +159,13 @@ const LoginSelector: React.FC<LoginSelectorProps> = ({ onLogin }) => {
         
         // Fallback to legacy login endpoints
         if (loginType === 'organization') {
-          response = await authAPI.organizationLogin({ email, password });
+          response = await authAPI.organizationLogin({ organizationId, email, password });
           console.log('Organization login response:', response.data);
           // Legacy response structure
           token = response.data.token;
           user = response.data.user;
         } else {
-          response = await authAPI.storeLogin({ email, password });
+          response = await authAPI.storeLogin({ storeId, email, password });
           console.log('Store login response:', response.data);
           // Legacy response structure
           token = response.data.token;
@@ -301,6 +323,49 @@ const LoginSelector: React.FC<LoginSelectorProps> = ({ onLogin }) => {
 
         {/* Login Form */}
         <form onSubmit={handleSubmit}>
+          {/* ID Field based on login type */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ 
+              display: 'block', 
+              marginBottom: '8px', 
+              fontWeight: '600', 
+              color: '#333',
+              fontSize: '14px'
+            }}>
+              {loginType === 'organization' ? 'Organization ID' : 'Store ID'}
+            </label>
+            <input
+              type="text"
+              value={loginType === 'organization' ? organizationId : storeId}
+              onChange={(e) => handleInputChange(loginType === 'organization' ? 'organizationId' : 'storeId', e.target.value)}
+              placeholder={loginType === 'organization' ? 'Enter your Organization ID' : 'Enter your Store ID'}
+              style={{ 
+                width: '100%', 
+                padding: '14px 16px', 
+                border: (loginType === 'organization' ? fieldErrors.organizationId : fieldErrors.storeId) ? '2px solid #dc2626' : '2px solid #e1e5e9', 
+                borderRadius: '8px', 
+                fontSize: '16px',
+                transition: 'border-color 0.2s ease',
+                boxSizing: 'border-box'
+              }}
+              onFocus={(e) => e.target.style.borderColor = (loginType === 'organization' ? fieldErrors.organizationId : fieldErrors.storeId) ? '#dc2626' : '#6c3fc5'}
+              onBlur={(e) => e.target.style.borderColor = (loginType === 'organization' ? fieldErrors.organizationId : fieldErrors.storeId) ? '#dc2626' : '#e1e5e9'}
+            />
+            {(loginType === 'organization' ? fieldErrors.organizationId : fieldErrors.storeId) && (
+              <div style={{ 
+                fontSize: '12px', 
+                color: '#dc2626', 
+                marginTop: '4px',
+                fontWeight: '500',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                ⚠️ {loginType === 'organization' ? fieldErrors.organizationId : fieldErrors.storeId}
+              </div>
+            )}
+          </div>
+
           <div style={{ marginBottom: '20px' }}>
             <label style={{ 
               display: 'block', 
