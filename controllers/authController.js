@@ -87,7 +87,7 @@ exports.login = async (req, res) => {
   }
 };
 
-// Organization Signup API
+// Organization Signup API (requires valid organizationId AND matching organization contact email)
 exports.organizationSignup = async (req, res) => {
   try {
     const { organizationId, email, password } = req.body;
@@ -98,6 +98,14 @@ exports.organizationSignup = async (req, res) => {
       return res.status(400).json({
         status: "error",
         message: "Organization ID not found"
+      });
+    }
+
+    // Validate that the signup email matches organization's registered contact email
+    if ((organization.email || '').toLowerCase() !== (email || '').toLowerCase()) {
+      return res.status(400).json({
+        status: "error",
+        message: "Email does not match organization's registered contact email"
       });
     }
 
@@ -114,7 +122,10 @@ exports.organizationSignup = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create organization user
+    const generatedUserId = `USER${Date.now().toString().slice(-6)}`;
     const user = new User({
+      _id: generatedUserId,
+      userId: generatedUserId,
       name: organization.contactPersonName, // Use organization contact person name
       email,
       password: hashedPassword,
@@ -154,7 +165,7 @@ exports.organizationSignup = async (req, res) => {
   }
 };
 
-// Store Signup API
+// Store Signup API (requires valid storeId AND matching store contact email)
 exports.storeSignup = async (req, res) => {
   try {
     const { storeId, email, password } = req.body;
@@ -177,6 +188,14 @@ exports.storeSignup = async (req, res) => {
       });
     }
 
+    // Validate that the signup email matches store's registered contact email
+    if ((store.email || '').toLowerCase() !== (email || '').toLowerCase()) {
+      return res.status(400).json({
+        status: "error",
+        message: "Email does not match store's registered contact email"
+      });
+    }
+
     // Check if email already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -190,7 +209,10 @@ exports.storeSignup = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create store user
+    const generatedUserId = `USER${Date.now().toString().slice(-6)}`;
     const user = new User({
+      _id: generatedUserId,
+      userId: generatedUserId,
       name: store.contactPersonName, // Use store contact person name
       email,
       password: hashedPassword,
@@ -226,13 +248,23 @@ exports.storeSignup = async (req, res) => {
   }
 };
 
-// Organization Admin Login
+// Organization Admin Login (requires organizationId + email + password)
 exports.organizationLogin = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { organizationId, email, password } = req.body;
 
-    // Find organization user by email
-    const user = await User.findOne({ email, userType: 'organization' });
+    if (!organizationId || !email || !password) {
+      return res.status(400).json({ error: 'organizationId, email and password are required' });
+    }
+
+    // Validate organization exists
+    const organization = await Organization.findById(organizationId);
+    if (!organization) {
+      return res.status(400).json({ error: 'Organization not found' });
+    }
+
+    // Find organization user by email and organization
+    const user = await User.findOne({ email, userType: 'organization', organizationId });
     
     if (!user) {
       return res.status(401).json({ error: 'Invalid organization credentials' });
@@ -250,7 +282,7 @@ exports.organizationLogin = async (req, res) => {
     }
 
     // Get organization details
-    const organization = await Organization.findById(user.organizationId);
+    // organization already fetched above
     
     // Generate JWT token
     const token = jwt.sign(
@@ -282,13 +314,23 @@ exports.organizationLogin = async (req, res) => {
   }
 };
 
-// Store Login
+// Store Login (requires storeId + email + password)
 exports.storeLogin = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { storeId, email, password } = req.body;
 
-    // Find store user by email
-    const user = await User.findOne({ email, userType: 'store' });
+    if (!storeId || !email || !password) {
+      return res.status(400).json({ error: 'storeId, email and password are required' });
+    }
+
+    // Validate store exists
+    const store = await Store.findById(storeId);
+    if (!store) {
+      return res.status(400).json({ error: 'Store not found' });
+    }
+
+    // Find store user by email and store
+    const user = await User.findOne({ email, userType: 'store', storeId });
     
     if (!user) {
       return res.status(401).json({ error: 'Invalid store credentials' });
@@ -306,7 +348,6 @@ exports.storeLogin = async (req, res) => {
     }
 
     // Get store and organization details
-    const store = await Store.findById(user.storeId);
     const organization = await Organization.findById(store.organizationId);
 
     // Generate JWT token
