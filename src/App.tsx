@@ -33,6 +33,9 @@ function App() {
   const [resetToken, setResetToken] = React.useState<string | null>(null);
   const [showNoticeHeader, setShowNoticeHeader] = React.useState<boolean>(true);
 
+  const isOrganizationUser = user?.userType === 'organization';
+  const isStoreUser = user?.userType === 'store';
+
   // Set document title
   React.useEffect(() => {
     document.title = 'Suguna Chicken - POS System';
@@ -77,6 +80,12 @@ function App() {
     localStorage.setItem('userId', userData.id);
     localStorage.setItem('userRole', userData.role);
     localStorage.setItem('userType', userData.userType);
+    // Set default landing page based on user type
+    if (userData.userType === 'store') {
+      setPage('pos');
+    } else if (userData.userType === 'organization') {
+      setPage('admin');
+    }
   };
 
   const handleLogout = () => {
@@ -127,6 +136,16 @@ function App() {
       console.log('No token found in URL');
     }
   }, []);
+
+  // Guard against invalid page selection for current role
+  React.useEffect(() => {
+    if (isStoreUser && page !== 'pos' && page !== 'sales') {
+      setPage('pos');
+    }
+    if (isOrganizationUser && page === 'pos') {
+      setPage('admin');
+    }
+  }, [isStoreUser, isOrganizationUser, page]);
 
   // Show reset password if token is present
   if (resetToken && (!user || !token)) {
@@ -217,89 +236,94 @@ function App() {
           overflowY: 'auto'
         }}>
           {/* Dashboard Section */}
-          <div style={{ 
-            padding: '0 20px 20px 20px'
-          }}>
-            <button style={{ 
-              width: '100%', 
-              margin: '0 0 8px 0', 
-              padding: '12px 16px', 
-              background: page==='admin' ? '#e53e3e' : 'transparent', 
-              color: page==='admin' ? '#fff' : '#ccc', 
-              border: 'none', 
-              borderRadius: '8px', 
-              fontSize: '14px', 
-              fontWeight: '500', 
-              cursor: 'pointer', 
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              textAlign: 'left'
-            }} onClick={() => setPage('admin')}>
-              <span style={{ fontSize: '16px' }}>📊</span>
-              Admin Dashboard
-            </button>
-          </div>
+          {isOrganizationUser && (
+            <div style={{ 
+              padding: '0 20px 20px 20px'
+            }}>
+              <button style={{ 
+                width: '100%', 
+                margin: '0 0 8px 0', 
+                padding: '12px 16px', 
+                background: page==='admin' ? '#e53e3e' : 'transparent', 
+                color: page==='admin' ? '#fff' : '#ccc', 
+                border: 'none', 
+                borderRadius: '8px', 
+                fontSize: '14px', 
+                fontWeight: '500', 
+                cursor: 'pointer', 
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                textAlign: 'left'
+              }} onClick={() => setPage('admin')}>
+                <span style={{ fontSize: '16px' }}>📊</span>
+                Admin Dashboard
+              </button>
+            </div>
+          )}
 
           {/* Master Data Section */}
-          <div style={{ 
-            padding: '0 20px 10px 20px'
-          }}>
+          {isOrganizationUser && (
             <div style={{ 
-              fontSize: '12px', 
-              fontWeight: '600', 
-              color: '#888', 
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-              marginBottom: '15px'
+              padding: '0 20px 10px 20px'
             }}>
-              Master Data
-            </div>
+              <div style={{ 
+                fontSize: '12px', 
+                fontWeight: '600', 
+                color: '#888', 
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                marginBottom: '15px'
+              }}>
+                Master Data
+              </div>
 
-            <button style={{ 
-              width: '100%', 
-              margin: '0 0 8px 0', 
-              padding: '12px 16px', 
-              background: page==='organization' ? '#e53e3e' : 'transparent', 
-              color: page==='organization' ? '#fff' : '#ccc', 
-              border: 'none', 
-              borderRadius: '8px', 
-              fontSize: '14px', 
-              fontWeight: '500', 
-              cursor: 'pointer', 
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              textAlign: 'left'
-            }} onClick={() => setPage('organization')}>
-              <span style={{ fontSize: '16px' }}>🏢</span>
-              Organization
-            </button>
-            <button style={{ 
-              width: '100%', 
-              margin: '0 0 8px 0', 
-              padding: '12px 16px', 
-              background: page==='store' ? '#e53e3e' : 'transparent', 
-              color: page==='store' ? '#fff' : '#ccc', 
-              border: 'none', 
-              borderRadius: '8px', 
-              fontSize: '14px', 
-              fontWeight: '500', 
-              cursor: 'pointer', 
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              textAlign: 'left'
-            }} onClick={() => setPage('store')}>
-              <span style={{ fontSize: '16px' }}>🏪</span>
-              Store
-            </button>
-          </div>
+              <button style={{ 
+                width: '100%', 
+                margin: '0 0 8px 0', 
+                padding: '12px 16px', 
+                background: page==='organization' ? '#e53e3e' : 'transparent', 
+                color: page==='organization' ? '#fff' : '#ccc', 
+                border: 'none', 
+                borderRadius: '8px', 
+                fontSize: '14px', 
+                fontWeight: '500', 
+                cursor: 'pointer', 
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                textAlign: 'left'
+              }} onClick={() => setPage('organization')}>
+                <span style={{ fontSize: '16px' }}>🏢</span>
+                Organization
+              </button>
+              <button style={{ 
+                width: '100%', 
+                margin: '0 0 8px 0', 
+                padding: '12px 16px', 
+                background: page==='store' ? '#e53e3e' : 'transparent', 
+                color: page==='store' ? '#fff' : '#ccc', 
+                border: 'none', 
+                borderRadius: '8px', 
+                fontSize: '14px', 
+                fontWeight: '500', 
+                cursor: 'pointer', 
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                textAlign: 'left'
+              }} onClick={() => setPage('store')}>
+                <span style={{ fontSize: '16px' }}>🏪</span>
+                Store
+              </button>
+            </div>
+          )}
           
           {/* Inventory Section */}
+          {isOrganizationUser && (
           <div style={{ 
             padding: '0 20px 10px 20px'
           }}>
@@ -354,31 +378,34 @@ function App() {
               Catalogue
             </button>
           </div>
+          )}
 
           {/* POS Interface */}
           <div style={{ 
             padding: '0 20px 10px 20px'
           }}>
-            <button style={{ 
-              width: '100%', 
-              margin: '0 0 8px 0', 
-              padding: '12px 16px', 
-              background: page==='pos' ? '#e53e3e' : 'transparent', 
-              color: page==='pos' ? '#fff' : '#ccc', 
-              border: 'none', 
-              borderRadius: '8px', 
-              fontSize: '14px', 
-              fontWeight: '500', 
-              cursor: 'pointer', 
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              textAlign: 'left'
-            }} onClick={() => setPage('pos')}>
-              <span style={{ fontSize: '16px' }}>🛒</span>
-              POS Interface
-            </button>
+            {isStoreUser && (
+              <button style={{ 
+                width: '100%', 
+                margin: '0 0 8px 0', 
+                padding: '12px 16px', 
+                background: page==='pos' ? '#e53e3e' : 'transparent', 
+                color: page==='pos' ? '#fff' : '#ccc', 
+                border: 'none', 
+                borderRadius: '8px', 
+                fontSize: '14px', 
+                fontWeight: '500', 
+                cursor: 'pointer', 
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                textAlign: 'left'
+              }} onClick={() => setPage('pos')}>
+                <span style={{ fontSize: '16px' }}>🛒</span>
+                POS Interface
+              </button>
+            )}
             <button style={{ 
               width: '100%', 
               margin: '0', 
@@ -499,12 +526,21 @@ function App() {
           </div>
         )}
         {page === 'admin' && <AdminDashboard />}
-        {page === 'pos' && <POSInterface />}
+        {page === 'pos' && (
+          <POSInterface
+            storeId={user.userType === 'store' ? user.store?._id : undefined}
+            storeName={user.userType === 'store' ? user.store?.storeName : undefined}
+          />
+        )}
         {page === 'organization' && <OrganizationModule />}
         {page === 'store' && <StoreModule />}
         {page === 'category' && <CategoryModule />}
         {page === 'catalogue' && <CatalogueModule />}
-        {page === 'sales' && <SalesModule />}
+        {page === 'sales' && (
+          <SalesModule
+            storeId={user.userType === 'store' ? user.store?._id : undefined}
+          />
+        )}
       </main>
     </div>
   );

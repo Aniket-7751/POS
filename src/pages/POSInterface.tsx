@@ -18,13 +18,18 @@ interface CustomerDetails {
   email?: string;
 }
 
-const POSInterface: React.FC = () => {
+interface POSInterfaceProps {
+  storeId?: string;
+  storeName?: string;
+}
+
+const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [barcodeInput, setBarcodeInput] = useState('');
   const [quantityInput, setQuantityInput] = useState(1);
   const [customerDetails, setCustomerDetails] = useState<CustomerDetails>({});
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'UPI'>('cash');
-  const [selectedStore, setSelectedStore] = useState<string>('');
+  const [selectedStore, setSelectedStore] = useState<string>(storeId || '');
   const [stores, setStores] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -34,16 +39,23 @@ const POSInterface: React.FC = () => {
 
   // Load stores on component mount
   useEffect(() => {
-    const loadStores = async () => {
-      try {
-        const response = await storeAPI.getAll();
-        setStores(response.data);
-      } catch (error) {
-        console.error('Failed to load stores:', error);
-      }
-    };
-    loadStores();
-  }, []);
+    if (storeId) {
+      // If storeId is provided (store user), set selectedStore and skip loading all stores
+      setSelectedStore(storeId);
+      setStores(storeName ? [{ _id: storeId, storeName }] : []);
+    } else {
+      // Organization user: load all stores
+      const loadStores = async () => {
+        try {
+          const response = await storeAPI.getAll();
+          setStores(response.data);
+        } catch (error) {
+          console.error('Failed to load stores:', error);
+        }
+      };
+      loadStores();
+    }
+  }, [storeId, storeName]);
 
   // Calculate totals
   const subTotal = cart.reduce((sum, item) => sum + (item.quantity * item.pricePerUnit), 0);
@@ -299,27 +311,44 @@ const POSInterface: React.FC = () => {
         {/* Store Selection */}
         <div style={{ marginBottom: '20px' }}>
           <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '14px' }}>
-            Select Store
+            Store
           </label>
-          <select
-            value={selectedStore}
-            onChange={(e) => setSelectedStore(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '12px',
-              border: '2px solid #e0e0e0',
-              borderRadius: '6px',
-              fontSize: '14px',
-              background: '#fff'
-            }}
-          >
-            <option value="">Select a store</option>
-            {stores.map(store => (
-              <option key={store._id} value={store._id}>
-                {store.storeName} - {store.storeLocation}
-              </option>
-            ))}
-          </select>
+          {storeId ? (
+            <input
+              type="text"
+              value={storeName || 'Store'}
+              disabled
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '2px solid #e0e0e0',
+                borderRadius: '6px',
+                fontSize: '14px',
+                background: '#f5f5f5',
+                color: '#888'
+              }}
+            />
+          ) : (
+            <select
+              value={selectedStore}
+              onChange={(e) => setSelectedStore(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '2px solid #e0e0e0',
+                borderRadius: '6px',
+                fontSize: '14px',
+                background: '#fff'
+              }}
+            >
+              <option value="">Select a store</option>
+              {stores.map(store => (
+                <option key={store._id} value={store._id}>
+                  {store.storeName} - {store.storeLocation}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* Customer Details */}

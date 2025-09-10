@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import salesAPI, { Sale } from './salesApi';
 
-const SalesModule: React.FC = () => {
+interface SalesModuleProps {
+  storeId?: string;
+}
+
+const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -10,28 +14,31 @@ const SalesModule: React.FC = () => {
 
   useEffect(() => {
     fetchSales();
-  }, [filter]);
+  }, [filter, storeId]);
 
   const fetchSales = async () => {
     try {
       setLoading(true);
       let response;
-      
-      switch (filter) {
-        case 'today':
-          response = await salesAPI.getTodaysSales();
-          break;
-        case 'cash':
-        case 'card':
-        case 'UPI':
-          response = await salesAPI.getByPaymentMethod(filter);
-          break;
-        default:
-          response = await salesAPI.getAll();
+      if (storeId) {
+        // If storeId is provided, fetch sales for that store only
+  response = await salesAPI.getTransactionsByStore(storeId);
+      } else {
+        switch (filter) {
+          case 'today':
+            response = await salesAPI.getTodaysSales();
+            break;
+          case 'cash':
+          case 'card':
+          case 'UPI':
+            response = await salesAPI.getByPaymentMethod(filter);
+            break;
+          default:
+            response = await salesAPI.getAll();
+        }
       }
-      
       // Ensure we have valid data and add default values for missing properties
-      const salesData = Array.isArray(response.data) ? response.data.map(sale => ({
+      const salesData = Array.isArray(response.data) ? response.data.map((sale: Sale) => ({
         ...sale,
         customerDetails: sale.customerDetails || {},
         items: sale.items || [],
@@ -41,7 +48,6 @@ const SalesModule: React.FC = () => {
         gstTotal: sale.gstTotal || 0,
         discountTotal: sale.discountTotal || 0
       })) : [];
-      
       setSales(salesData);
       setError('');
     } catch (err: any) {
