@@ -60,7 +60,7 @@ exports.login = async (req, res) => {
         organizationId: user.organizationId || (additionalData.store ? additionalData.store.organizationId : null),
         storeId: user.storeId
       },
-      process.env.JWT_SECRET || 'your-secret-key',
+      process.env.JWT_SECRET || 'your-very-long-random-string',
       { expiresIn: '24h' }
     );
 
