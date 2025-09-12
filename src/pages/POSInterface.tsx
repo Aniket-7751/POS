@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { salesAPI, catalogueAPI, invoiceAPI, storeAPI } from '../api';
 import PaymentModal from '../components/PaymentModal';
 
@@ -25,6 +25,11 @@ interface POSInterfaceProps {
 
 const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const barcodeInputRef = useRef<HTMLInputElement>(null);
+  // Focus barcode input on mount
+  useEffect(() => {
+    if (barcodeInputRef.current) barcodeInputRef.current.focus();
+  }, []);
   const [barcodeInput, setBarcodeInput] = useState('');
   const [quantityInput, setQuantityInput] = useState(1);
   const [customerDetails, setCustomerDetails] = useState<CustomerDetails>({});
@@ -34,6 +39,7 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showRequiredError, setShowRequiredError] = useState(false);
   const [invoiceData, setInvoiceData] = useState<any>(null);
   const [showInvoice, setShowInvoice] = useState(false);
 
@@ -65,7 +71,10 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
 
   // Add item to cart by barcode
   const addItemByBarcode = async () => {
-    if (!barcodeInput.trim()) return;
+    if (!barcodeInput.trim()) {
+      if (barcodeInputRef.current) barcodeInputRef.current.focus();
+      return;
+    }
 
     try {
       setLoading(true);
@@ -97,15 +106,16 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
           };
           setCart([...cart, newItem]);
         }
-        
         setBarcodeInput('');
         setQuantityInput(1);
         setMessage(`Added ${product.itemName} to cart`);
+        if (barcodeInputRef.current) barcodeInputRef.current.focus();
       }
     } catch (error) {
       setMessage('Product not found');
     } finally {
       setLoading(false);
+      if (barcodeInputRef.current) barcodeInputRef.current.focus();
     }
   };
 
@@ -180,15 +190,43 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
       return;
     }
 
-    // Show payment modal instead of direct processing
-    setShowPaymentModal(true);
+    if (!customerDetails.name || !customerDetails.phone) {
+      setShowRequiredError(true);
+      return;
+    }
+
+    setShowRequiredError(false);
+
+    // Check stock for each cart item
+    setLoading(true);
+    try {
+      for (const item of cart) {
+        // Fetch latest product info by SKU
+        const res = await catalogueAPI.getBySKU(item.sku);
+        const product = res.data;
+        if (!product || typeof product.stock !== 'number') {
+          setMessage(`Unable to verify stock for ${item.itemName}`);
+          setLoading(false);
+          return;
+        }
+        if (item.quantity > product.stock) {
+          setMessage(`Not enough stock for ${item.itemName}. Available: ${product.stock}`);
+          setLoading(false);
+          return;
+        }
+      }
+      setShowPaymentModal(true);
+    } catch (err) {
+      setMessage('Error checking stock. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle payment completion from modal
   const handlePaymentComplete = async (paymentMethod: string, transactionId?: string) => {
     try {
       setLoading(true);
-      
       // Create transaction
       const transactionData = {
         storeId: selectedStore,
@@ -208,8 +246,6 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
       });
 
       // Set invoice data and show invoice in modal
-      // console.log('Invoice response from API:', invoiceResponse.data);
-      // console.log('Invoice data being set:', invoiceResponse.data.invoice);
       setInvoiceData(invoiceResponse.data.invoice);
       setShowInvoice(true);
 
@@ -218,12 +254,25 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
       setCustomerDetails({});
       setBarcodeInput('');
       setQuantityInput(1);
-      
+      // Focus barcode input after payment
+      setTimeout(() => {
+        if (barcodeInputRef.current) barcodeInputRef.current.focus();
+      }, 100);
     } catch (error: any) {
       setMessage(error.response?.data?.error || 'Payment failed');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Refocus barcode input after closing or printing/downloading invoice
+  const handlePaymentModalClose = () => {
+    setShowPaymentModal(false);
+    setShowInvoice(false);
+    setInvoiceData(null);
+    setTimeout(() => {
+      if (barcodeInputRef.current) barcodeInputRef.current.focus();
+    }, 100);
   };
 
   return (
@@ -260,6 +309,7 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
           <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch', width: '100%' }}>
             <input
               type="text"
+              ref={barcodeInputRef}
               value={barcodeInput}
               onChange={(e) => setBarcodeInput(e.target.value)}
               placeholder="Scan or enter barcode"
@@ -353,14 +403,18 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
 
         {/* Customer Details */}
         <div style={{ marginBottom: '20px' }}>
-          <h3 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: 'bold', color: '#333' }}>Customer Details (Optional)</h3>
+          <h3 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: 'bold', color: '#333' }}>Customer Details</h3>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch' }}>
             <div style={{ flex: 1 }}>
+              <label style={{ fontWeight: 500, fontSize: '14px', color: '#333', marginBottom: '4px', display: 'block' }}>
+                Customer Name <span style={{ color: 'red' }}>*</span>
+              </label>
               <input
                 type="text"
                 placeholder="Customer Name"
                 value={customerDetails.name || ''}
                 onChange={(e) => setCustomerDetails({...customerDetails, name: e.target.value})}
+                required
                 style={{
                   width: '100%',
                   padding: '12px',
@@ -372,11 +426,18 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
               />
             </div>
             <div style={{ flex: 1 }}>
+              <label style={{ fontWeight: 500, fontSize: '14px', color: '#333', marginBottom: '4px', display: 'block' }}>
+                Phone Number <span style={{ color: 'red' }}>*</span>
+              </label>
               <input
                 type="text"
                 placeholder="Phone Number"
                 value={customerDetails.phone || ''}
-                onChange={(e) => setCustomerDetails({...customerDetails, phone: e.target.value})}
+                onChange={(e) => setCustomerDetails({ ...customerDetails, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                required
+                maxLength={10}
+                pattern="[0-9]{10}"
+                inputMode="numeric"
                 style={{
                   width: '100%',
                   padding: '12px',
@@ -388,6 +449,12 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
               />
             </div>
           </div>
+          {/* Show error if required fields are missing, but only after trying to process payment */}
+          {showRequiredError && (
+            <div style={{ color: 'red', marginTop: '8px', fontSize: '13px', fontWeight: 500 }}>
+              Customer Name and Phone Number are required
+            </div>
+          )}
         </div>
 
 
@@ -395,7 +462,7 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
           <div style={{
             padding: '10px',
             background: message.includes('error') || message.includes('failed') ? '#ffebee' : '#e8f5e8',
-            color: message.includes('error') || message.includes('failed') ? '#c62828' : '#2e7d32',
+            color: message.includes('error') || message.includes('failed') ? '#c62828' : '#2f8e55ff',
             borderRadius: '4px',
             marginBottom: '20px'
           }}>
@@ -565,11 +632,7 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
       {/* Payment Modal */}
       <PaymentModal
         isOpen={showPaymentModal}
-        onClose={() => {
-          setShowPaymentModal(false);
-          setShowInvoice(false);
-          setInvoiceData(null);
-        }}
+        onClose={handlePaymentModalClose}
         totalAmount={grandTotal}
         onPaymentComplete={handlePaymentComplete}
         customerDetails={customerDetails}

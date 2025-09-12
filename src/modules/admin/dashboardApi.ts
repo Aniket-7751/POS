@@ -28,4 +28,5 @@ export const dashboardAPI = {
   getProfitData: () => api.get('/dashboard/profit-data'),
   getCustomerStats: () => api.get('/dashboard/customer-stats'),
   getInventoryStats: () => api.get('/dashboard/inventory-stats'),
+  getSalesByStore: () => api.get('/dashboard/sales-by-store'),
 };
