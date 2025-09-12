@@ -14,7 +14,7 @@ RUN npm install --production
 COPY . .
 
 # Expose the backend port (change if your backend uses a different port)
-EXPOSE 5000
+EXPOSE 5050
 
 # Set environment variables (override in docker-compose or at runtime)
 ENV NODE_ENV=production
