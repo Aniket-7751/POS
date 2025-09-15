@@ -15,8 +15,10 @@ import AdminDashboard from './modules/admin/AdminDashboard';
 import AdminOrderRequests from './modules/admin/orders/AdminOrderRequests';
 import StoreOrders from './modules/store/orders/StoreOrders';
 import SalesModule from './modules/sales/SalesModule';
+import BarcodeList from './modules/inventory/catalogue/BarcodeList';
 
-type Page = 'admin' | 'admin-orders' | 'pos' | 'organization' | 'store' | 'inventory' | 'category' | 'catalogue' | 'sales' | 'store-orders';
+type Page = 'admin' | 'admin-orders' | 'pos' | 'organization' | 'store' | 'inventory' | 'category' | 'catalogue' | 'sales' | 'store-orders' | 'barcodes';
+          {/* Barcode Section for Org */}
 
 interface User {
   id: string;
@@ -406,6 +408,26 @@ function App() {
               <span style={{ fontSize: '16px' }}>📦</span>
               Catalogue
             </button>
+            <button style={{
+                width: '100%',
+                margin: '0 0 8px 0',
+                padding: '12px 16px',
+                background: page==='barcodes' ? '#e53e3e' : 'transparent',
+                color: page==='barcodes' ? '#fff' : '#ccc',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                textAlign: 'left'
+              }} onClick={() => setPage('barcodes')}>
+                <span style={{ fontSize: '16px' }}>🏷️</span>
+                Barcode List
+            </button>
           </div>
           )}
 
@@ -589,6 +611,7 @@ function App() {
         {page === 'category' && <CategoryModule />}
         {page === 'catalogue' && <CatalogueModule />}
   {page === 'store-orders' && <StoreOrders />}
+  {page === 'barcodes' && <BarcodeList />}
   {page === 'sales' && (
           <SalesModule
             storeId={user.userType === 'store' ? user.store?._id : undefined}
