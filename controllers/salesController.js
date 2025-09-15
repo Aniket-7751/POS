@@ -2,6 +2,11 @@ const Sale = require('../models/Sale');
 const Product = require('../models/Product');
 const Catalogue = require('../models/Catalogue');
 const Store = require('../models/Store');
+const { parseISO, startOfDay, endOfDay, endOfToday } = require("date-fns");
+// const tz = require("date-fns-tz");
+
+// const  zonedTimeToUtc  = tz.zonedTimeToUtc;
+const { zonedTimeToUtc } = require('date-fns-tz');
 
 // Get all sales/transactions
 exports.getAllSales = async (req, res) => {
@@ -19,12 +24,12 @@ exports.getAllSales = async (req, res) => {
 // Create new POS transaction
 exports.createTransaction = async (req, res) => {
   try {
-    const { 
-      storeId, 
-      items, 
-      paymentMethod, 
-      customerDetails, 
-      cashier 
+    const {
+      storeId,
+      items,
+      paymentMethod,
+      customerDetails,
+      cashier
     } = req.body;
 
     // Validate store exists
@@ -124,11 +129,63 @@ exports.getTransactionById = async (req, res) => {
   }
 };
 
-// Get transactions by store
+// Get transactions by store 
+// with optional filters and search
 exports.getTransactionsByStore = async (req, res) => {
   try {
     const { storeId } = req.params;
-    const transactions = await Sale.find({ storeId })
+    const { filter, search, date, startDate, endDate } = req.query; // filter & search from query params
+
+    const query = { storeId };
+    const timeZone = "Asia/Kolkata";
+
+    // Apply filter
+    if (filter === 'today') {
+      const start = zonedTimeToUtc(startOfDay(new Date()), timeZone);
+      const end = zonedTimeToUtc(endOfToday(), timeZone);
+      query.dateTime = { $gte: start, $lt: end };
+    }
+
+    // Yesterday's filter
+    if (filter === "yesterday") {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const start = zonedTimeToUtc(startOfDay(yesterday), timeZone);
+      const end = zonedTimeToUtc(endOfDay(yesterday), timeZone);
+      query.dateTime = { $gte: start, $lt: end };
+    }
+
+    // Single date
+    if (date) {
+      const parsedDate = parseISO(date);
+      const start = zonedTimeToUtc(startOfDay(parsedDate), timeZone);
+      const end = zonedTimeToUtc(endOfDay(parsedDate), timeZone);
+      query.dateTime = { $gte: start, $lt: end };
+    }
+    // Date range
+    if (startDate && endDate) {
+      const start = zonedTimeToUtc(startOfDay(parseISO(startDate)), timeZone);
+      const end = zonedTimeToUtc(endOfDay(parseISO(endDate)), timeZone);
+      query.dateTime = { $gte: start, $lt: end };
+    }
+
+    // Payment filter
+    if (['cash', 'card', 'UPI'].includes(filter)) {
+      query.paymentMethod = filter;
+    }
+
+    // Apply search
+    if (search) {
+      query.$or = [
+        { transactionId: { $regex: search, $options: 'i' } },
+        { 'customerDetails.name': { $regex: search, $options: 'i' } },
+        { 'customerDetails.phone': { $regex: search, $options: 'i' } },
+        { 'customerDetails.email': { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // const transactions = await Sale.find({ storeId })
+    const transactions = await Sale.find(query)
       .populate('storeId')
       .populate('cashier')
       .sort({ dateTime: -1 });
@@ -172,17 +229,17 @@ exports.getSalesByDateRange = async (req, res) => {
     const { start, end } = req.query;
     const startDate = new Date(start);
     const endDate = new Date(end);
-    
+
     const sales = await Sale.find({
       dateTime: {
         $gte: startDate,
         $lte: endDate
       }
     })
-    .populate('storeId')
-    .populate('cashier')
-    .sort({ dateTime: -1 });
-    
+      .populate('storeId')
+      .populate('cashier')
+      .sort({ dateTime: -1 });
+
     res.json(sales);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -196,11 +253,11 @@ exports.getSalesByTransactionId = async (req, res) => {
     const sale = await Sale.findOne({ transactionId })
       .populate('storeId')
       .populate('cashier');
-    
+
     if (!sale) {
       return res.status(404).json({ error: 'Transaction not found' });
     }
-    
+
     res.json(sale);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -214,16 +271,16 @@ exports.getSalesStats = async (req, res) => {
     const totalRevenue = await Sale.aggregate([
       { $group: { _id: null, total: { $sum: '$grandTotal' } } }
     ]);
-    
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
+
     const todaySales = await Sale.countDocuments({
       dateTime: { $gte: today, $lt: tomorrow }
     });
-    
+
     const todayRevenue = await Sale.aggregate([
       {
         $match: {
@@ -232,7 +289,7 @@ exports.getSalesStats = async (req, res) => {
       },
       { $group: { _id: null, total: { $sum: '$grandTotal' } } }
     ]);
-    
+
     const paymentMethodStats = await Sale.aggregate([
       {
         $group: {
@@ -242,7 +299,7 @@ exports.getSalesStats = async (req, res) => {
         }
       }
     ]);
-    
+
     res.json({
       totalSales,
       totalRevenue: totalRevenue[0]?.total || 0,
@@ -256,25 +313,34 @@ exports.getSalesStats = async (req, res) => {
 };
 
 // Get today's sales
-exports.getTodaysSales = async (req, res) => {
-  try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    const sales = await Sale.find({
-      dateTime: { $gte: today, $lt: tomorrow }
-    })
-    .populate('storeId')
-    .populate('cashier')
-    .sort({ dateTime: -1 });
-    
-    res.json(sales);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+// const moment = require("moment-timezone");
+
+// exports.getTodaysSales = async (req, res) => {
+//   try {
+//     const now = new Date();
+//     //today.setHours(0, 0, 0, 0);
+//     //const tomorrow = new Date(today);
+//     //tomorrow.setDate(tomorrow.getDate() + 1);
+
+//     //const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0); // Indian Standard time
+
+//     //const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+
+//     // Force to IST
+//     const startOfToday = moment().tz("Asia/Kolkata").startOf("day").toDate();
+//     const endOfToday = moment().tz("Asia/Kolkata").endOf("day").toDate();
+//     const sales = await Sale.find({
+//       dateTime: { $gte: startOfToday, $lt: endOfToday }
+//     })
+//       .populate('storeId')
+//       .populate('cashier')
+//       .sort({ dateTime: -1 });
+
+//     res.json(sales);
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// };
 
 // Get sales by payment method
 exports.getSalesByPaymentMethod = async (req, res) => {
@@ -284,7 +350,7 @@ exports.getSalesByPaymentMethod = async (req, res) => {
       .populate('storeId')
       .populate('cashier')
       .sort({ dateTime: -1 });
-    
+
     res.json(sales);
   } catch (err) {
     res.status(500).json({ error: err.message });
