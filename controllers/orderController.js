@@ -124,7 +124,17 @@ exports.getStoreOrders = async (req, res) => {
     const storeId = req.user.storeId || req.query.storeId;
     if (!storeId) return res.status(400).json({ error: 'Store ID required' });
     const orders = await Order.find({ storeId }).sort({ createdAt: -1 });
-    res.json(orders);
+    // Fetch invoice details for each order if invoiceId exists
+    const ordersWithInvoice = await Promise.all(
+      orders.map(async (order) => {
+        let invoice = null;
+        if (order.invoiceId) {
+          invoice = await require('../models/StoreOrderInvoice').findById(order.invoiceId);
+        }
+        return { ...order.toObject(), invoice };
+      })
+    );
+    res.json(ordersWithInvoice);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
