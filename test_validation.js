@@ -6,7 +6,7 @@ async function testValidation() {
     
     // Test 1: Invalid email format
     console.log('Test 1: Invalid email format (missing @)');
-    const response1 = await axios.post('http://localhost:5000/api/auth/forgot-password', {
+  const response1 = await axios.post('http://localhost:5050/api/auth/forgot-password', {
       email: 'orgadmingmail.com' // Invalid email (missing @)
     });
     console.log('Response:', response1.data);
@@ -22,7 +22,7 @@ async function testValidation() {
 
   try {
     console.log('\nTest 2: Missing email field');
-    const response2 = await axios.post('http://localhost:5000/api/auth/forgot-password', {
+  const response2 = await axios.post('http://localhost:5050/api/auth/forgot-password', {
       // No email field
     });
     console.log('Response:', response2.data);
