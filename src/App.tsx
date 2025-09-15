@@ -149,8 +149,8 @@ function App() {
     }
   }, [isStoreUser, isOrganizationUser, page]);
 
-  // Show reset password if token is present
-  if (resetToken && (!user || !token)) {
+  // Show reset password if token is present (prioritize reset over auth state)
+  if (resetToken) {
     return (
       <ResetPassword 
         token={resetToken} 
@@ -158,7 +158,16 @@ function App() {
           console.log('Reset password success callback called');
           localStorage.removeItem('resetToken');
           setResetToken(null);
-          // Force re-render to show login page
+          // Log out to ensure we land on the login page after reset
+          setUser(null);
+          setToken(null);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          localStorage.removeItem('userId');
+          localStorage.removeItem('userRole');
+          localStorage.removeItem('userType');
+          // Optional: navigate to root
+          window.history.replaceState({}, document.title, '/');
         }} 
       />
     );
