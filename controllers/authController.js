@@ -5,6 +5,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { sendPasswordResetEmail } = require('../utils/emailService');
+const { sendStoreSignupEmail } = require('../utils/emailService');
+
 
 // Unified Login API
 exports.login = async (req, res) => {
@@ -168,7 +170,7 @@ exports.organizationSignup = async (req, res) => {
 // Store Signup API (requires valid storeId AND matching store contact email)
 exports.storeSignup = async (req, res) => {
   try {
-    const { storeId, email, password } = req.body;
+    const { storeId, email, password, token } = req.body;
 
     // Check if store exists
     const store = await Store.findById(storeId);
@@ -188,21 +190,29 @@ exports.storeSignup = async (req, res) => {
       });
     }
 
-    // Validate that the signup email matches store's registered contact email
-    if ((store.email || '').toLowerCase() !== (email || '').toLowerCase()) {
-      return res.status(400).json({
-        status: "error",
-        message: "Email does not match store's registered contact email"
-      });
+    // If email was provided, validate it matches store contact email
+    if (email && (store.email || '').toLowerCase() !== (email || '').toLowerCase()) {
+      return res.status(400).json({ status: 'error', message: "Email does not match store's registered contact email" });
     }
 
-    // Check if email already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({
-        status: "error",
-        message: "Email already exists"
-      });
+    // Try lookup by email+store first
+    const normalizedEmail = (email || '').toLowerCase().trim();
+    let pendingUser = email ? await User.findOne({ email: normalizedEmail, storeId }) : null;
+
+    // Fallback: lookup by token if not found by email
+    if (!pendingUser && token) {
+      pendingUser = await User.findOne({ storeId, signupToken: token });
+    }
+
+    if (!pendingUser) {
+      return res.status(400).json({ status: 'error', message: 'Signup not initiated or link invalid' });
+    }
+    if (pendingUser.status !== 'pending') {
+      return res.status(400).json({ status: 'error', message: 'Account already activated' });
+    }
+    // Validate signup token
+    if (!token || pendingUser.signupToken !== token || !pendingUser.signupTokenExpires || pendingUser.signupTokenExpires < new Date()) {
+      return res.status(400).json({ status: 'error', message: 'Invalid or expired signup token' });
     }
 
     // Hash password
@@ -210,33 +220,24 @@ exports.storeSignup = async (req, res) => {
 
     // Create store user
     const generatedUserId = `USER${Date.now().toString().slice(-6)}`;
-    const user = new User({
-      _id: generatedUserId,
-      userId: generatedUserId,
-      name: store.contactPersonName, // Use store contact person name
-      email,
-      password: hashedPassword,
-      userType: 'store',
-      role: 'cashier',
-      storeId,
-      permissions: [
-        { module: 'pos', actions: ['read', 'write'] }
-      ]
-    });
-
-    await user.save();
+    // Complete signup for pending user
+    pendingUser.password = hashedPassword;
+    pendingUser.status = 'active';
+    pendingUser.signupToken = undefined;
+    pendingUser.signupTokenExpires = undefined;
+    await pendingUser.save();
 
     res.status(201).json({
       status: "success",
       message: "Store signup successful",
       data: {
         user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          userType: user.userType,
-          role: user.role,
-          storeId: user.storeId
+          id: pendingUser._id,
+          name: pendingUser.name,
+          email: pendingUser.email,
+          userType: pendingUser.userType,
+          role: pendingUser.role,
+          storeId: pendingUser.storeId
         }
       }
     });
