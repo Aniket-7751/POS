@@ -3,10 +3,20 @@ import SignupForm from './SignupForm';
 
 interface SignupSelectorProps {
   onBackToLogin: () => void;
+  storeId?: string | null;
+  email?: string | null;
+  token?: string | null;
 }
 
-const SignupSelector: React.FC<SignupSelectorProps> = ({ onBackToLogin }) => {
+const SignupSelector: React.FC<SignupSelectorProps> = ({ onBackToLogin, storeId, email, token }) => {
   const [signupType, setSignupType] = useState<'organization' | 'store' | null>(null);
+
+  // Auto-select store signup if storeId is provided
+  React.useEffect(() => {
+    if (storeId) {
+      setSignupType('store');
+    }
+  }, [storeId]);
 
   if (signupType) {
     return (
@@ -14,6 +24,9 @@ const SignupSelector: React.FC<SignupSelectorProps> = ({ onBackToLogin }) => {
         signupType={signupType}
         onBackToLogin={onBackToLogin}
         onBackToSignupSelector={() => setSignupType(null)}
+        storeId={storeId}
+        emailFromLink={email}
+        tokenFromLink={token}
       />
     );
   }

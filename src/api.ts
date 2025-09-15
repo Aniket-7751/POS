@@ -38,7 +38,8 @@ export const authAPI = {
   
   // Signup endpoints
   organizationSignup: (data: { organizationId: string; email: string; password: string }) => api.post('/auth/organization/signup', data),
-  storeSignup: (data: { storeId: string; email: string; password: string }) => api.post('/auth/store/signup', data),
+  storeSignup: (data: { storeId: string; email: string; password: string; token?: string }) => api.post('/auth/store/signup', data),
+  verifyStoreSignupToken: (data: { email: string; storeId: string; token: string }) => api.post('/auth/store/verify-signup-token', data),
   
   // Legacy login endpoints (keeping for backward compatibility)
   organizationLogin: (data: { organizationId: string; email: string; password: string }) => api.post('/auth/organization/login', data),
