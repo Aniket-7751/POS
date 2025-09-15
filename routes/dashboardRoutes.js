@@ -10,5 +10,6 @@ router.get('/sales-trend', dashboardController.getSalesTrend);
 router.get('/profit-data', dashboardController.getProfitData);
 router.get('/customer-stats', dashboardController.getCustomerStats);
 router.get('/inventory-stats', dashboardController.getInventoryStats);
+router.get('/sales-by-store', dashboardController.getSalesByStore);
 
 module.exports = router;

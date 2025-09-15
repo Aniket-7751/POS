@@ -1,3 +1,41 @@
+// Get sales per store for org admin dashboard
+exports.getSalesByStore = async (req, res) => {
+  try {
+    // Optionally, filter by organizationId if needed (e.g., req.user.organizationId)
+    const salesByStore = await Sale.aggregate([
+      {
+        $group: {
+          _id: '$storeId',
+          totalSales: { $sum: '$grandTotal' },
+          transactionCount: { $sum: 1 }
+        }
+      },
+      {
+        $lookup: {
+          from: 'stores',
+          localField: '_id',
+          foreignField: 'storeId',
+          as: 'storeInfo'
+        }
+      },
+      { $unwind: { path: '$storeInfo', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          storeId: '$_id',
+          storeName: '$storeInfo.storeName',
+          totalSales: 1,
+          transactionCount: 1,
+          _id: 0
+        }
+      },
+      { $sort: { totalSales: -1 } }
+    ]);
+    res.json(salesByStore);
+  } catch (err) {
+    console.error('Error fetching sales by store:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
 const Sale = require('../models/Sale');
 const Invoice = require('../models/Invoice');
 const Catalogue = require('../models/Catalogue');
