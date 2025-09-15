@@ -33,7 +33,8 @@ exports.createTransaction = async (req, res) => {
       return res.status(404).json({ error: 'Store not found' });
     }
 
-    // Calculate totals
+    // Always use GST rate from the store
+    const gstRate = store.gstRate || 0;
     let subTotal = 0;
     let gstTotal = 0;
     let discountTotal = 0;
@@ -52,7 +53,8 @@ exports.createTransaction = async (req, res) => {
 
       const itemSubTotal = item.quantity * item.pricePerUnit;
       const itemDiscount = item.discount || 0;
-      const itemGst = item.gst || 0;
+      // Calculate GST for each product using store gstRate
+      const itemGst = ((itemSubTotal - itemDiscount) * gstRate) / 100;
       const itemTotal = itemSubTotal - itemDiscount + itemGst;
 
       subTotal += itemSubTotal;
