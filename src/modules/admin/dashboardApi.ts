@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:5000/api';
+// const API_BASE = 'http://localhost:5050/api';
+const API_BASE = 'https://apis.pos.hutechsolutions.in/api';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -28,4 +29,5 @@ export const dashboardAPI = {
   getProfitData: () => api.get('/dashboard/profit-data'),
   getCustomerStats: () => api.get('/dashboard/customer-stats'),
   getInventoryStats: () => api.get('/dashboard/inventory-stats'),
+  getSalesByStore: () => api.get('/dashboard/sales-by-store'),
 };

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { dashboardAPI } from './dashboardApi';
 
 interface DashboardStats {
@@ -24,6 +25,7 @@ interface ProductData {
 }
 
 const AdminDashboard: React.FC = () => {
+  const [salesByStore, setSalesByStore] = useState<any[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
     todaySales: 0,
     thisWeekSales: 0,
@@ -36,9 +38,20 @@ const AdminDashboard: React.FC = () => {
   const [mostSoldProducts, setMostSoldProducts] = useState<ProductData[]>([]);
   const [loading, setLoading] = useState(true);
 
+
   useEffect(() => {
     fetchDashboardData();
+    fetchSalesByStore();
   }, []);
+
+  const fetchSalesByStore = async () => {
+    try {
+      const res = await dashboardAPI.getSalesByStore();
+      setSalesByStore(res.data);
+    } catch (err) {
+      setSalesByStore([]);
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -244,6 +257,40 @@ const AdminDashboard: React.FC = () => {
         maxWidth: '100%',
         boxSizing: 'border-box'
       }}>
+        {/* Sales Per Store Bar Chart */}
+        <div style={{
+          background: 'white',
+          borderRadius: '10px',
+          padding: '16px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          boxSizing: 'border-box',
+          minHeight: '350px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'stretch',
+          justifyContent: 'flex-start',
+        }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#333', margin: 0, marginBottom: '16px' }}>
+            Sales Per Store
+          </h3>
+          <div style={{ flex: 1, minHeight: '250px' }}>
+            {salesByStore.length === 0 ? (
+              <div style={{ color: '#dc3545', fontWeight: 500, textAlign: 'center', marginTop: '40px' }}>No Data Available</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={salesByStore} margin={{ top: 10, right: 30, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="storeName" tick={false} axisLine={false} />
+                  <YAxis tickFormatter={formatCurrency} />
+                  <Tooltip formatter={(value: any) => formatCurrency(value)} />
+                  <Legend />
+                  <Bar dataKey="totalSales" fill="#8884d8" name="Total Sales" />
+                  <Bar dataKey="transactionCount" fill="#82ca9d" name="Transactions" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
         {/* Monthly Sales Panel */}
         <div style={{
           background: 'white',
@@ -376,90 +423,6 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Monthly Profit Panel */}
-        <div style={{
-          background: 'white',
-          borderRadius: '10px',
-          padding: '16px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-          boxSizing: 'border-box'
-        }}>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            marginBottom: '16px',
-            flexWrap: 'wrap',
-            gap: '8px'
-          }}>
-            <h3 style={{ 
-              fontSize: '18px', 
-              fontWeight: '600', 
-              color: '#333',
-              margin: 0
-            }}>
-              Monthly Profit
-            </h3>
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              <button style={{
-                padding: '4px 8px',
-                background: '#f8f9fa',
-                border: '1px solid #e9ecef',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '11px',
-                whiteSpace: 'nowrap'
-              }}>
-                🔄
-              </button>
-              <button style={{
-                padding: '4px 8px',
-                background: '#f8f9fa',
-                border: '1px solid #e9ecef',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '11px',
-                whiteSpace: 'nowrap'
-              }}>
-                📊
-              </button>
-              <button style={{
-                padding: '4px 8px',
-                background: '#f8f9fa',
-                border: '1px solid #e9ecef',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '11px',
-                whiteSpace: 'nowrap'
-              }}>
-                📋
-              </button>
-              <button style={{
-                padding: '4px 8px',
-                background: '#f8f9fa',
-                border: '1px solid #e9ecef',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '11px',
-                whiteSpace: 'nowrap'
-              }}>
-                🔽
-              </button>
-            </div>
-          </div>
-          
-          <div style={{ 
-            height: '250px', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            color: '#dc3545',
-            fontSize: '16px',
-            fontWeight: '500'
-          }}>
-            {loading ? 'Loading...' : 'No Data Available'}
-          </div>
-        </div>
       </div>
 
       {/* Most Sold Products Panel */}

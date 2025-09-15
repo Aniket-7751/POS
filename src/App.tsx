@@ -13,9 +13,13 @@ import StoreModule from './modules/store/StoreModule';
 import CategoryModule from './modules/inventory/category/CategoryModule';
 import CatalogueModule from './modules/inventory/catalogue/CatalogueModule';
 import AdminDashboard from './modules/admin/AdminDashboard';
+import AdminOrderRequests from './modules/admin/orders/AdminOrderRequests';
+import StoreOrders from './modules/store/orders/StoreOrders';
 import SalesModule from './modules/sales/SalesModule';
+import BarcodeList from './modules/inventory/catalogue/BarcodeList';
 
-type Page = 'admin' | 'pos' | 'organization' | 'store' | 'inventory' | 'category' | 'catalogue' | 'sales';
+type Page = 'admin' | 'admin-orders' | 'pos' | 'organization' | 'store' | 'inventory' | 'category' | 'catalogue' | 'sales' | 'store-orders' | 'barcodes';
+          {/* Barcode Section for Org */}
 
 interface User {
   id: string;
@@ -178,7 +182,7 @@ function App() {
 
   // Guard against invalid page selection for current role
   React.useEffect(() => {
-    if (isStoreUser && page !== 'pos' && page !== 'sales') {
+    if (isStoreUser && page !== 'pos' && page !== 'sales' && page !== 'store-orders') {
       setPage('pos');
     }
     if (isOrganizationUser && page === 'pos') {
@@ -310,20 +314,18 @@ function App() {
         }}>
           {/* Dashboard Section */}
           {isOrganizationUser && (
-            <div style={{ 
-              padding: '0 20px 20px 20px'
-            }}>
-              <button style={{ 
-                width: '100%', 
-                margin: '0 0 8px 0', 
-                padding: '12px 16px', 
-                background: page==='admin' ? '#e53e3e' : 'transparent', 
-                color: page==='admin' ? '#fff' : '#ccc', 
-                border: 'none', 
-                borderRadius: '8px', 
-                fontSize: '14px', 
-                fontWeight: '500', 
-                cursor: 'pointer', 
+            <div style={{ padding: '0 20px 20px 20px' }}>
+              <button style={{
+                width: '100%',
+                margin: '0 0 8px 0',
+                padding: '12px 16px',
+                background: page==='admin' ? '#e53e3e' : 'transparent',
+                color: page==='admin' ? '#fff' : '#ccc',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 display: 'flex',
                 alignItems: 'center',
@@ -332,6 +334,26 @@ function App() {
               }} onClick={() => setPage('admin')}>
                 <span style={{ fontSize: '16px' }}>📊</span>
                 Admin Dashboard
+              </button>
+              <button style={{
+                width: '100%',
+                margin: '0 0 8px 0',
+                padding: '12px 16px',
+                background: page==='admin-orders' ? '#e53e3e' : 'transparent',
+                color: page==='admin-orders' ? '#fff' : '#ccc',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                textAlign: 'left'
+              }} onClick={() => setPage('admin-orders')}>
+                <span style={{ fontSize: '16px' }}>�</span>
+                Order Requests
               </button>
             </div>
           )}
@@ -450,6 +472,26 @@ function App() {
               <span style={{ fontSize: '16px' }}>📦</span>
               Catalogue
             </button>
+            <button style={{
+                width: '100%',
+                margin: '0 0 8px 0',
+                padding: '12px 16px',
+                background: page==='barcodes' ? '#e53e3e' : 'transparent',
+                color: page==='barcodes' ? '#fff' : '#ccc',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                textAlign: 'left'
+              }} onClick={() => setPage('barcodes')}>
+                <span style={{ fontSize: '16px' }}>🏷️</span>
+                Barcode List
+            </button>
           </div>
           )}
 
@@ -458,26 +500,48 @@ function App() {
             padding: '0 20px 10px 20px'
           }}>
             {isStoreUser && (
-              <button style={{ 
-                width: '100%', 
-                margin: '0 0 8px 0', 
-                padding: '12px 16px', 
-                background: page==='pos' ? '#e53e3e' : 'transparent', 
-                color: page==='pos' ? '#fff' : '#ccc', 
-                border: 'none', 
-                borderRadius: '8px', 
-                fontSize: '14px', 
-                fontWeight: '500', 
-                cursor: 'pointer', 
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                textAlign: 'left'
-              }} onClick={() => setPage('pos')}>
-                <span style={{ fontSize: '16px' }}>🛒</span>
-                POS Interface
-              </button>
+              <>
+                <button style={{
+                  width: '100%',
+                  margin: '0 0 8px 0',
+                  padding: '12px 16px',
+                  background: page==='pos' ? '#e53e3e' : 'transparent',
+                  color: page==='pos' ? '#fff' : '#ccc',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  textAlign: 'left'
+                }} onClick={() => setPage('pos')}>
+                  <span style={{ fontSize: '16px' }}>🛒</span>
+                  POS Interface
+                </button>
+                <button style={{
+                  width: '100%',
+                  margin: '0 0 8px 0',
+                  padding: '12px 16px',
+                  background: page==='store-orders' ? '#e53e3e' : 'transparent',
+                  color: page==='store-orders' ? '#fff' : '#ccc',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  textAlign: 'left'
+                }} onClick={() => setPage('store-orders')}>
+                  <span style={{ fontSize: '16px' }}>📦</span>
+                  My Orders
+                </button>
+              </>
             )}
             <button style={{ 
               width: '100%', 
@@ -598,8 +662,9 @@ function App() {
             />
           </div>
         )}
-        {page === 'admin' && <AdminDashboard />}
-        {page === 'pos' && (
+  {page === 'admin' && <AdminDashboard />}
+  {page === 'admin-orders' && <AdminOrderRequests />}
+  {page === 'pos' && (
           <POSInterface
             storeId={user.userType === 'store' ? user.store?._id : undefined}
             storeName={user.userType === 'store' ? user.store?.storeName : undefined}
@@ -609,7 +674,9 @@ function App() {
         {page === 'store' && <StoreModule />}
         {page === 'category' && <CategoryModule />}
         {page === 'catalogue' && <CatalogueModule />}
-        {page === 'sales' && (
+  {page === 'store-orders' && <StoreOrders />}
+  {page === 'barcodes' && <BarcodeList />}
+  {page === 'sales' && (
           <SalesModule
             storeId={user.userType === 'store' ? user.store?._id : undefined}
           />
