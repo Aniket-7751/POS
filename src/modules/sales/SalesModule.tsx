@@ -1,37 +1,56 @@
 import React, { useState, useEffect } from 'react';
 import salesAPI, { Sale } from './salesApi';
 
-const SalesModule: React.FC = () => {
+interface SalesModuleProps {
+  storeId?: string;
+}
+
+const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState<'all' | 'today' | 'cash' | 'card' | 'UPI'>('all');
+  const [filter, setFilter] = useState<'all' | 'today' | 'cash' | 'card' | 'UPI' | 'date' | 'day'>('all');
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
-
-  useEffect(() => {
-    fetchSales();
-  }, [filter]);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDay, setSelectedDay] = useState('');
 
   const fetchSales = async () => {
     try {
       setLoading(true);
       let response;
-      
       switch (filter) {
         case 'today':
-          response = await salesAPI.getTodaysSales();
+          response = await salesAPI.getTodaysSales(storeId);
           break;
         case 'cash':
         case 'card':
         case 'UPI':
-          response = await salesAPI.getByPaymentMethod(filter);
+          response = await salesAPI.getByPaymentMethod(filter, storeId);
+          break;
+        case 'date':
+          if (selectedDate) {
+            response = await salesAPI.getByDate(selectedDate, storeId);
+          } else {
+            setSales([]);
+            setError('Please select a date');
+            setLoading(false);
+            return;
+          }
+          break;
+        case 'day':
+          if (selectedDay) {
+            response = await salesAPI.getByDay(selectedDay, storeId);
+          } else {
+            setSales([]);
+            setError('Please select a day');
+            setLoading(false);
+            return;
+          }
           break;
         default:
-          response = await salesAPI.getAll();
+          response = await salesAPI.getAll(storeId);
       }
-      
-      // Ensure we have valid data and add default values for missing properties
-      const salesData = Array.isArray(response.data) ? response.data.map(sale => ({
+      const salesData = Array.isArray(response.data) ? response.data.map((sale: Sale) => ({
         ...sale,
         customerDetails: sale.customerDetails || {},
         items: sale.items || [],
@@ -41,17 +60,20 @@ const SalesModule: React.FC = () => {
         gstTotal: sale.gstTotal || 0,
         discountTotal: sale.discountTotal || 0
       })) : [];
-      
       setSales(salesData);
       setError('');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to fetch sales');
       console.error('Error fetching sales:', err);
-      setSales([]); // Set empty array on error
+      setSales([]);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchSales();
+  }, [filter, storeId, selectedDate, selectedDay]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -188,8 +210,48 @@ const SalesModule: React.FC = () => {
             <option value="cash">Cash Payments</option>
             <option value="card">Card Payments</option>
             <option value="UPI">UPI Payments</option>
+            <option value="date">By Date</option> {/* New */}
+            <option value="day">By Day</option>   {/* New */}
           </select>
-          
+
+          {/* Date Picker */}
+          {filter === 'date' && (
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={e => setSelectedDate(e.target.value)}
+              style={{
+                padding: '8px 12px',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '14px'
+              }}
+            />
+          )}
+
+          {/* Day Selector */}
+          {filter === 'day' && (
+            <select
+              value={selectedDay}
+              onChange={e => setSelectedDay(e.target.value)}
+              style={{
+                padding: '8px 12px',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '14px'
+              }}
+            >
+              <option value="">Select Day</option>
+              <option value="Sunday">Sunday</option>
+              <option value="Monday">Monday</option>
+              <option value="Tuesday">Tuesday</option>
+              <option value="Wednesday">Wednesday</option>
+              <option value="Thursday">Thursday</option>
+              <option value="Friday">Friday</option>
+              <option value="Saturday">Saturday</option>
+            </select>
+          )}
+
           <button
             onClick={fetchSales}
             style={{

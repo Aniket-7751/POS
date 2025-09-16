@@ -1,36 +1,41 @@
-import { salesAPI } from '../../api';
-
-export interface SaleItem {
-  sku: string;
-  itemName: string;
-  quantity: number;
-  pricePerUnit: number;
-  gst: number;
-  discount: number;
-  totalAmount: number;
-}
-
-export interface CustomerDetails {
-  name?: string;
-  phone?: string;
-  email?: string;
-}
+import axios from 'axios';
 
 export interface Sale {
   _id: string;
   transactionId: string;
-  storeId: string;
-  items: SaleItem[];
+  dateTime: string;
+  items: any[];
+  paymentMethod: string;
+  customerDetails?: {
+    name?: string;
+    phone?: string;
+    email?: string;
+  };
+  grandTotal: number;
   subTotal: number;
   gstTotal: number;
   discountTotal: number;
-  grandTotal: number;
-  paymentMethod: 'cash' | 'card' | 'UPI';
-  dateTime: string;
-  customerDetails: CustomerDetails;
-  cashier: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
-export default salesAPI;
+const getAll = (storeId?: string) =>
+  axios.get('/sales', { params: { storeId } });
+
+const getTodaysSales = (storeId?: string) =>
+  axios.get('/sales/today', { params: { storeId } });
+
+const getByPaymentMethod = (method: string, storeId?: string) =>
+  axios.get('/sales/payment-method', { params: { method, storeId } });
+
+const getByDate = (date: string, storeId?: string) =>
+  axios.get('/sales/by-date', { params: { date, storeId } });
+
+const getByDay = (day: string, storeId?: string) =>
+  axios.get('/sales/by-day', { params: { day, storeId } });
+
+export default {
+  getAll,
+  getTodaysSales,
+  getByPaymentMethod,
+  getByDate,
+  getByDay,
+};

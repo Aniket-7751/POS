@@ -370,6 +370,7 @@ const AdminDashboard: React.FC = () => {
                 fontWeight: '500'
               }}>
                 No Data Available
+                
               </div>
             )}
           </div>
