@@ -12,6 +12,7 @@ export interface Store {
   organizationId: string;
   createdAt?: string;
   updatedAt?: string;
+  gstRate?: number;
 }
 
 // New interface for the enhanced store creation response

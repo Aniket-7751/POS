@@ -16,6 +16,7 @@ const initialState: Store = {
   storePicture: '',
   status: 'active',
   organizationId: '',
+  gstRate: 18,
 };
 
 interface AddStorePageProps {
@@ -67,6 +68,7 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
     let newValue = value;
     let errorMsg = '';
 
+<<<<<<< HEAD
     // if (name === 'storeId') {
     //   // Only allow alphanumeric
     //   if (/[^a-zA-Z0-9]/.test(value)) {
@@ -74,15 +76,21 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
     //     newValue = value.replace(/[^a-zA-Z0-9]/g, '');
     //   }
     // }
+=======
+    if (name === 'storeId') {
+      if (/[^a-zA-Z0-9]/.test(value)) {
+        errorMsg = 'Special characters not allowed';
+        newValue = value.replace(/[^a-zA-Z0-9]/g, '');
+      }
+    }
+>>>>>>> 8e45fd19c02f2679da401e4a0c9aeccad741e5cb
     if (name === 'contactPersonName') {
-      // Only allow alphabets and spaces
       if (/[^a-zA-Z\s]/.test(value)) {
         errorMsg = 'Only alphabets allowed';
         newValue = value.replace(/[^a-zA-Z\s]/g, '');
       }
     }
     if (name === 'contactNumber') {
-      // Only allow digits, max 10
       if (/[^0-9]/.test(value)) {
         errorMsg = 'Only integers allowed';
         newValue = value.replace(/[^0-9]/g, '');
@@ -90,11 +98,15 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
       newValue = newValue.slice(0, 10);
     }
     if (name === 'email') {
-      // Only allow lowercase, @ - _ + .
       if (/[^a-z0-9@\-_.+]/.test(value) || /[A-Z]/.test(value)) {
         errorMsg = 'Only lowercase letters, numbers, and @ - _ + . allowed';
         newValue = value.replace(/[^a-z0-9@\-_.+]/g, '').replace(/[A-Z]/g, '');
       }
+    }
+    if (name === 'gstRate') {
+      setForm({ ...form, gstRate: Number(value) });
+      setFieldErrors(prev => ({ ...prev, [name]: errorMsg }));
+      return;
     }
 
     setForm({ ...form, [name]: newValue });
@@ -286,6 +298,10 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
                     No organizations found. Please create an organization first.
                   </div>
                 )}
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontWeight: 500 }}>GST Rate (%) <span style={{ color: 'red' }}>*</span></label>
+                <input name="gstRate" type="number" min={0} max={100} value={form.gstRate ?? 18} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
               </div>
             </div>
             {error && (
