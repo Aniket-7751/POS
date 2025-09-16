@@ -1,4 +1,5 @@
 import React from 'react';
+import { FiGrid, FiClipboard, FiBriefcase, FiHome, FiPackage, FiTag, FiShoppingCart, FiSettings, FiBarChart2 } from 'react-icons/fi';
 
 import './App.css';
 
@@ -37,6 +38,7 @@ function App() {
   const [token, setToken] = React.useState<string | null>(localStorage.getItem('token'));
   const [resetToken, setResetToken] = React.useState<string | null>(null);
   const [showNoticeHeader, setShowNoticeHeader] = React.useState<boolean>(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState<boolean>(false);
 
   // Theme hooks must be after all state declarations
   const [theme, setTheme] = React.useState<string>('light');
@@ -49,6 +51,15 @@ function App() {
       } catch {}
     }
   }, [page]);
+
+  // Listen for theme changes from StoreSettings
+  React.useEffect(() => {
+    const handler = (e: any) => {
+      if (e?.detail?.theme) setTheme(e.detail.theme);
+    };
+    window.addEventListener('storeThemeUpdated', handler as EventListener);
+    return () => window.removeEventListener('storeThemeUpdated', handler as EventListener);
+  }, []);
 
   const isOrganizationUser = user?.userType === 'organization';
   const isStoreUser = user?.userType === 'store';
@@ -194,8 +205,8 @@ function App() {
   }
 
   return (
-    <div className={theme === 'dark' ? 'theme-dark app-shell' : 'theme-light app-shell'} style={{ background: theme === 'dark' ? '#222' : '#f5f6fa', color: theme === 'dark' ? '#fff' : undefined }}>
-      <aside className="app-aside" style={{ 
+    <div className={theme === 'dark' ? 'theme-dark app-shell' : 'theme-light app-shell'} style={{ background: theme === 'dark' ? '#111' : '#f5f6fa' }}>
+      <aside className={sidebarCollapsed ? 'app-aside collapsed' : 'app-aside'} style={{ 
         background: '#1a1a1a', 
         color: '#fff',
         padding: '0',
@@ -207,7 +218,7 @@ function App() {
           borderBottom: '1px solid #333',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'space-between'
         }}>
           <div style={{ 
             display: 'flex', 
@@ -225,24 +236,26 @@ function App() {
             }}>
               <span style={{ fontSize: '20px' }}>🐔</span>
             </div>
-            <div>
-              <div style={{ 
-                fontSize: '18px', 
-                fontWeight: '700', 
-                color: '#e53e3e',
-                lineHeight: '1.2'
-              }}>
-                SUGUNA CHICKEN
-              </div>
-              <div style={{ 
-                fontSize: '12px', 
-                color: '#38a169',
-                fontWeight: '500'
-              }}>
-                POS System
-              </div>
+            <div className="nav-text">
+              <div style={{ fontSize: '18px', fontWeight: '700', color: '#e53e3e', lineHeight: '1.2' }}>SUGUNA CHICKEN</div>
+              <div style={{ fontSize: '12px', color: '#38a169', fontWeight: '500' }}>POS System</div>
             </div>
           </div>
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            style={{
+              background: 'transparent',
+              border: '1px solid #333',
+              color: '#ccc',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              padding: '6px 8px'
+            }}
+          >
+            {sidebarCollapsed ? '»' : '«'}
+          </button>
         </div>
 
         {/* Navigation Content */}
@@ -272,9 +285,9 @@ function App() {
                 alignItems: 'center',
                 gap: '12px',
                 textAlign: 'left'
-              }} onClick={() => setPage('admin')}>
-                <span style={{ fontSize: '16px' }}>📊</span>
-                Admin Dashboard
+              }} onClick={() => setPage('admin')} title="Admin Dashboard">
+                <FiGrid size={18} />
+                <span className="nav-text">Admin Dashboard</span>
               </button>
               <button style={{
                 width: '100%',
@@ -292,9 +305,9 @@ function App() {
                 alignItems: 'center',
                 gap: '12px',
                 textAlign: 'left'
-              }} onClick={() => setPage('admin-orders')}>
-                <span style={{ fontSize: '16px' }}>�</span>
-                Order Requests
+              }} onClick={() => setPage('admin-orders')} title="Order Requests">
+                <FiClipboard size={18} />
+                <span className="nav-text">Order Requests</span>
               </button>
             </div>
           )}
@@ -331,9 +344,9 @@ function App() {
                 alignItems: 'center',
                 gap: '12px',
                 textAlign: 'left'
-              }} onClick={() => setPage('organization')}>
-                <span style={{ fontSize: '16px' }}>🏢</span>
-                Organization
+              }} onClick={() => setPage('organization')} title="Organization">
+                <FiBriefcase size={18} />
+                <span className="nav-text">Organization</span>
               </button>
               <button style={{ 
                 width: '100%', 
@@ -351,9 +364,9 @@ function App() {
                 alignItems: 'center',
                 gap: '12px',
                 textAlign: 'left'
-              }} onClick={() => setPage('store')}>
-                <span style={{ fontSize: '16px' }}>🏪</span>
-                Store
+              }} onClick={() => setPage('store')} title="Store">
+                <FiHome size={18} />
+                <span className="nav-text">Store</span>
               </button>
             </div>
           )}
@@ -389,9 +402,9 @@ function App() {
               alignItems: 'center',
               gap: '12px',
               textAlign: 'left'
-            }} onClick={() => setPage('category')}>
-              <span style={{ fontSize: '16px' }}>📂</span>
-              Category
+            }} onClick={() => setPage('category')} title="Category">
+              <FiGrid size={18} />
+              <span className="nav-text">Category</span>
             </button>
             <button style={{ 
               width: '100%', 
@@ -409,9 +422,9 @@ function App() {
               alignItems: 'center',
               gap: '12px',
               textAlign: 'left'
-            }} onClick={() => setPage('catalogue')}>
-              <span style={{ fontSize: '16px' }}>📦</span>
-              Catalogue
+            }} onClick={() => setPage('catalogue')} title="Catalogue">
+              <FiPackage size={18} />
+              <span className="nav-text">Catalogue</span>
             </button>
             <button style={{
                 width: '100%',
@@ -429,9 +442,9 @@ function App() {
                 alignItems: 'center',
                 gap: '12px',
                 textAlign: 'left'
-              }} onClick={() => setPage('barcodes')}>
-                <span style={{ fontSize: '16px' }}>🏷️</span>
-                Barcode List
+              }} onClick={() => setPage('barcodes')} title="Barcode List">
+                <FiTag size={18} />
+                <span className="nav-text">Barcode List</span>
             </button>
           </div>
           )}
@@ -458,9 +471,9 @@ function App() {
                   alignItems: 'center',
                   gap: '12px',
                   textAlign: 'left'
-                }} onClick={() => setPage('pos')}>
-                  <span style={{ fontSize: '16px' }}>🛒</span>
-                  POS Interface
+                }} onClick={() => setPage('pos')} title="POS Interface">
+                  <FiShoppingCart size={18} />
+                  <span className="nav-text">POS Interface</span>
                 </button>
                 <button style={{
                   width: '100%',
@@ -478,9 +491,9 @@ function App() {
                   alignItems: 'center',
                   gap: '12px',
                   textAlign: 'left'
-                }} onClick={() => setPage('store-orders')}>
-                  <span style={{ fontSize: '16px' }}>📦</span>
-                  My Orders
+                }} onClick={() => setPage('store-orders')} title="My Orders">
+                  <FiClipboard size={18} />
+                  <span className="nav-text">My Orders</span>
                 </button>
                 <button style={{
                   width: '100%',
@@ -498,9 +511,9 @@ function App() {
                   alignItems: 'center',
                   gap: '12px',
                   textAlign: 'left'
-                }} onClick={() => setPage('store-settings')}>
-                  <span style={{ fontSize: '16px' }}>⚙️</span>
-                  Settings
+                }} onClick={() => setPage('store-settings')} title="Settings">
+                  <FiSettings size={18} />
+                  <span className="nav-text">Settings</span>
                 </button>
               </>
             )}
@@ -520,9 +533,9 @@ function App() {
               alignItems: 'center',
               gap: '12px',
               textAlign: 'left'
-            }} onClick={() => setPage('sales')}>
-              <span style={{ fontSize: '16px' }}>📊</span>
-              Sales
+            }} onClick={() => setPage('sales')} title="Sales">
+              <FiBarChart2 size={18} />
+              <span className="nav-text">Sales</span>
             </button>
           </div>
         </div>
@@ -608,7 +621,7 @@ function App() {
           )}
         </div>
       </aside>
-      <main className="app-main">
+      <main className={sidebarCollapsed ? 'app-main collapsed' : 'app-main'}>
         {/* Notice Header - appears on all pages */}
         {showNoticeHeader && (
           <div style={{ position: 'relative', zIndex: 1000 }}>

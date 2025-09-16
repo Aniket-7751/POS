@@ -46,6 +46,13 @@ code {
   z-index: 1000;
 }
 
+.app-aside.collapsed { width: 72px; }
+.app-main.collapsed { margin-left: 72px; width: calc(100% - 72px); }
+.app-aside .nav-text { display: inline; }
+.app-aside.collapsed .nav-text { display: none; }
+.app-aside .nav-item { position: relative; }
+.app-aside.collapsed .nav-item[title] { cursor: pointer; }
+
 .app-main {
   flex: 1;
   display: flex;
@@ -57,6 +64,18 @@ code {
   min-height: 100vh;
   width: calc(100% - 280px);
 }
+
+/* Themes */
+.theme-light {
+  --bg: #f5f6fa;
+}
+.theme-dark {
+  --bg: #111;
+}
+.theme-light .app-main { background: var(--bg); }
+.theme-dark .app-main { background: var(--bg); }
+.theme-dark .app-aside { background: #141414 !important; }
+.theme-dark .pos-left, .theme-dark .pos-right { background: #1a1a1a; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
 
 /* POS layout */
 .pos-container {

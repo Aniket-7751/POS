@@ -46,6 +46,11 @@ const StoreSettings: React.FC<StoreSettingsProps> = ({ storeId }) => {
       // Reload to reflect server values
       const res = await storeAPI.getById(store._id || store.storeId);
       setStore(res.data as Store);
+      // Persist to localStorage for app-wide theme and notify app
+      try {
+        localStorage.setItem('store', JSON.stringify(res.data));
+      } catch {}
+      window.dispatchEvent(new CustomEvent('storeThemeUpdated', { detail: { theme: res.data.theme || 'light' } }));
     } catch (err: any) {
       setMessage(err.response?.data?.error || 'Save failed');
     } finally {
