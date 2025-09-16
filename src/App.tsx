@@ -522,7 +522,7 @@ function App() {
               textAlign: 'left'
             }} onClick={() => setPage('sales')}>
               <span style={{ fontSize: '16px' }}>📊</span>
-              My Sales
+              Sales
             </button>
           </div>
         </div>

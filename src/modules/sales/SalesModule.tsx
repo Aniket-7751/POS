@@ -165,7 +165,7 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
       }}>
         <div>
           <h1 style={{ fontWeight: 700, fontSize: 32, marginBottom: 8, color: '#1a1a1a' }}>
-            My Sales
+            Sales
           </h1>
           <div style={{ color: '#6c6c6c', fontSize: 16 }}>
             View and manage all completed sales transactions
