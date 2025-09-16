@@ -40,9 +40,15 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
 
   useEffect(() => {
     if (editData) {
+      console.log('Setting form data from editData:', editData);
       setForm(editData);
     }
   }, [editData]);
+
+  // Debug form state changes
+  useEffect(() => {
+    console.log('Form state changed:', form);
+  }, [form]);
 
   useEffect(() => {
     const fetchOrganizations = async () => {
@@ -87,6 +93,7 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
       }
     }
     if (name === 'gstRate') {
+      console.log('Updating gstRate from', form.gstRate, 'to', Number(value));
       setForm({ ...form, gstRate: Number(value) });
       setFieldErrors(prev => ({ ...prev, [name]: errorMsg }));
       return;
@@ -145,13 +152,19 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
+    console.log('Form data being submitted:', form);
     if (editId) {
+      console.log('Updating store with ID:', editId);
       await updateStore(editId, form);
     } else {
+      console.log('Creating new store');
       await createStore(form);
     }
-    setForm(initialState);
-    setStorePicture(null);
+    // Don't reset form for edit mode, only for create mode
+    if (!editId) {
+      setForm(initialState);
+      setStorePicture(null);
+    }
     onBack();
   };
 
@@ -240,7 +253,19 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ fontWeight: 500 }}>GST Rate (%) <span style={{ color: 'red' }}>*</span></label>
-                <input name="gstRate" type="number" min={0} max={100} value={form.gstRate ?? 18} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                <input 
+                  name="gstRate" 
+                  type="number" 
+                  min={0} 
+                  max={100} 
+                  step={0.01}
+                  value={form.gstRate ?? 18} 
+                  onChange={handleChange} 
+                  required 
+                  placeholder="e.g. 18 or 12.5"
+                  style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} 
+                />
+                <div style={{ fontSize: 12, color: '#6c6c6c', marginTop: 6 }}>Enter GST percentage for this store; used for POS, sales and invoices.</div>
               </div>
             </div>
             {error && <div style={{ color: 'red', marginBottom: 16 }}>{error}</div>}
