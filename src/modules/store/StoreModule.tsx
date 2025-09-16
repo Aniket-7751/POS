@@ -67,7 +67,7 @@ const StoreModule: React.FC = () => {
           </thead>
           <tbody>
             {stores.map(store => {
-              const defaultImg = '/download (1).png';
+              const defaultImg = '/suguna.png';
               let imageSrc: string = defaultImg;
               if (store.storePicture) {
                 if (
