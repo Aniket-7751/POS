@@ -2,6 +2,7 @@ const Sale = require('../models/Sale');
 const Product = require('../models/Product');
 const Catalogue = require('../models/Catalogue');
 const Store = require('../models/Store');
+const StorePrice = require('../models/StorePrice');
 const { parseISO, startOfDay, endOfDay, endOfToday } = require("date-fns");
 // const tz = require("date-fns-tz");
 
@@ -56,7 +57,24 @@ exports.createTransaction = async (req, res) => {
         throw new Error(`Insufficient stock for ${product.itemName}. Available: ${product.stock}`);
       }
 
-      const itemSubTotal = item.quantity * item.pricePerUnit;
+      // Determine effective price for store
+      const override = await StorePrice.findOne({ storeId, sku: item.sku, status: 'active' });
+      const basePrice = Number(product.price) || 0;
+      let effectivePrice = basePrice;
+      if (override) {
+        if (typeof override.overridePrice === 'number') {
+          effectivePrice = Number(override.overridePrice);
+        } else {
+          const margin = Number(override.marginValue) || 0;
+          effectivePrice = override.marginType === 'absolute' ? basePrice + margin : basePrice + (basePrice * margin / 100);
+        }
+      } else {
+        // Fallback: use store-wide profit margin percent if no per-SKU override
+        const storeMargin = Number(store.profitMarginPercent) || 0;
+        effectivePrice = basePrice + (basePrice * storeMargin / 100);
+      }
+
+      const itemSubTotal = Number(item.quantity) * effectivePrice;
       const itemDiscount = item.discount || 0;
       // Calculate GST for each product using store gstRate
       const itemGst = ((itemSubTotal - itemDiscount) * gstRate) / 100;
@@ -70,7 +88,7 @@ exports.createTransaction = async (req, res) => {
         sku: item.sku,
         itemName: product.itemName,
         quantity: item.quantity,
-        pricePerUnit: item.pricePerUnit,
+        pricePerUnit: effectivePrice,
         gst: itemGst,
         discount: itemDiscount,
         totalAmount: itemTotal
