@@ -38,13 +38,15 @@ const StoreSettings: React.FC<StoreSettingsProps> = ({ storeId }) => {
     setSaving(true);
     setMessage('');
     try {
-      await storeAPI.update(store._id || store.storeId, {
+      const id = store._id || store.storeId || storeId;
+      if (!id) throw new Error('Store id missing');
+      await storeAPI.update(id, {
         discountRate: store.discountRate ?? 0,
         theme: store.theme || 'light'
       });
       setMessage('Settings saved');
       // Reload to reflect server values
-      const res = await storeAPI.getById(store._id || store.storeId);
+      const res = await storeAPI.getById(id);
       setStore(res.data as Store);
     } catch (err: any) {
       setMessage(err.response?.data?.error || 'Save failed');
