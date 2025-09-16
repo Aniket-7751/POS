@@ -1,4 +1,5 @@
-import axios from 'axios';
+ //import axios from 'axios';
+ import { api } from '../../api';
 
 export interface Sale {
   _id: string;
@@ -15,22 +16,29 @@ export interface Sale {
   subTotal: number;
   gstTotal: number;
   discountTotal: number;
+  storeId: any;
 }
 
+// ✅ Helper: get storeId from localStorage
+const getStoreId = (): string | undefined => {
+  const id = localStorage.getItem('storeId');
+  return id ?? undefined;
+};
+
 const getAll = (storeId?: string) =>
-  axios.get('/sales', { params: { storeId } });
+  api.get('/sales', { params: { storeId } });
 
 const getTodaysSales = (storeId?: string) =>
-  axios.get('/sales/today', { params: { storeId } });
+  api.get(`/sales/store/${storeId}`, { params: { filter: 'today' } });
 
 const getByPaymentMethod = (method: string, storeId?: string) =>
-  axios.get('/sales/payment-method', { params: { method, storeId } });
+  api.get('/sales/payment-method', { params: { method, storeId } });
 
 const getByDate = (date: string, storeId?: string) =>
-  axios.get('/sales/by-date', { params: { date, storeId } });
+  api.get('/sales/by-date', { params: { date, storeId } });
 
 const getByDay = (day: string, storeId?: string) =>
-  axios.get('/sales/by-day', { params: { day, storeId } });
+  api.get('/sales/by-day', { params: { day, storeId } });
 
 export default {
   getAll,

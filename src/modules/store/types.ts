@@ -12,4 +12,5 @@ export interface Store {
   organizationId: string;
   createdAt?: string;
   updatedAt?: string;
+  gstRate?: number;
 }

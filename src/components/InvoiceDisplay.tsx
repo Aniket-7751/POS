@@ -23,6 +23,7 @@ interface InvoiceData {
   transactionId: string;
   items: InvoiceItem[];
   totalAmount: number;
+  gstTotal?: number;
   paymentMode: 'cash' | 'card' | 'UPI';
   dateTime: string;
   customerDetails: CustomerDetails;
@@ -461,7 +462,7 @@ const InvoiceDisplay: React.FC<InvoiceDisplayProps> = ({ invoiceData, onClose })
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                 <span>GST:</span>
-                <span>{formatCurrency(calculateGSTTotal())}</span>
+                <span>{formatCurrency(invoiceData.gstTotal ?? calculateGSTTotal())}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                 <span>Discount:</span>

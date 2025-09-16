@@ -5,19 +5,55 @@ interface SalesModuleProps {
   storeId?: string;
 }
 
+// ✅ Helper: get storeId safely from localStorage
+const getStoreIdFromStorage = (): string | undefined => {
+  const id = localStorage.getItem('storeId');
+  return id ?? undefined;
+};
+
 const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [resolvedStoreId, setResolvedStoreId] = useState<string | undefined>(
+    storeId || getStoreIdFromStorage()
+  );
   const [filter, setFilter] = useState<'all' | 'today' | 'cash' | 'card' | 'UPI' | 'date' | 'day'>('all');
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedDay, setSelectedDay] = useState('');
 
+  // ✅ Ensure storeId is available (from props or localStorage or API)
+  useEffect(() => {
+    const ensureStoreId = async () => {
+      if (!resolvedStoreId) {
+        try {
+          const response = await salesAPI.getAll(); // get all sales without store filter
+          if (response.data.length > 0 && response.data[0].storeId?.storeId) {
+            const id = response.data[0].storeId.storeId;
+            localStorage.setItem('storeId', id);
+            setResolvedStoreId(id);
+          }
+        } catch (err) {
+          console.error('Error fetching storeId:', err);
+        }
+      }
+    };
+    ensureStoreId();
+  }, [resolvedStoreId]);
+
   const fetchSales = async () => {
     try {
       setLoading(true);
+
+      if (!resolvedStoreId) {
+        setError('Store ID is missing. Please refresh or log in again.');
+        setSales([]);
+        return;
+      }
+
       let response;
+
       switch (filter) {
         case 'today':
           response = await salesAPI.getTodaysSales(storeId);
@@ -117,15 +153,15 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
 
   if (loading) {
     return (
-      <div style={{ 
-        minHeight: '100vh', 
-        background: '#f8f9fb', 
+      <div style={{
+        minHeight: '100vh',
+        background: '#f8f9fb',
         padding: 32,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        <div style={{ 
+        <div style={{
           textAlign: 'center',
           color: '#666'
         }}>
@@ -138,21 +174,21 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
 
   if (error) {
     return (
-      <div style={{ 
-        minHeight: '100vh', 
-        background: '#f8f9fb', 
+      <div style={{
+        minHeight: '100vh',
+        background: '#f8f9fb',
         padding: 32,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        <div style={{ 
+        <div style={{
           textAlign: 'center',
           color: '#e53e3e'
         }}>
           <div style={{ fontSize: '24px', marginBottom: '16px' }}>❌</div>
           <div>{error}</div>
-          <button 
+          <button
             onClick={fetchSales}
             style={{
               marginTop: '16px',
@@ -173,11 +209,11 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8f9fb', padding: 32 }}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 32 
+        marginBottom: 32
       }}>
         <div>
           <h1 style={{ fontWeight: 700, fontSize: 32, marginBottom: 8, color: '#1a1a1a' }}>
@@ -187,9 +223,9 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
             View and manage all completed sales transactions
           </div>
         </div>
-        
-        <div style={{ 
-          display: 'flex', 
+
+        <div style={{
+          display: 'flex',
           gap: 12,
           alignItems: 'center'
         }}>
@@ -308,7 +344,7 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
             <div>Customer</div>
             <div>Total Amount</div>
           </div>
-          
+
           {sales.map((sale) => (
             <div
               key={sale._id}
@@ -337,9 +373,9 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
               <div style={{ color: '#666' }}>
                 {(sale.items || []).length} item{(sale.items || []).length !== 1 ? 's' : ''}
               </div>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
                 gap: '6px',
                 color: getPaymentMethodColor(sale.paymentMethod || 'cash')
               }}>
@@ -406,13 +442,13 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
                 ×
               </button>
             </div>
-            
+
             <div style={{ padding: '24px' }}>
               <div style={{ marginBottom: '20px' }}>
                 <h3 style={{ margin: '0 0 12px 0', color: '#495057' }}>Transaction Info</h3>
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: '1fr 1fr', 
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
                   gap: '12px',
                   fontSize: '14px'
                 }}>

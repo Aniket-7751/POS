@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:5000/api';
-
+const API_BASE = 'http://localhost:5050/api';
+// const API_BASE = 'https://apis.pos.hutechsolutions.in/api';
 // Create axios instance with default config
-const api = axios.create({
+ export const api = axios.create({
   baseURL: API_BASE,
   headers: {
     'Content-Type': 'application/json',
