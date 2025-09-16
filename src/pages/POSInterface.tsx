@@ -38,6 +38,7 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
   const [stores, setStores] = useState<any[]>([]);
   const [gstRate, setGstRate] = useState<number>(0);
   const [discountRate, setDiscountRate] = useState<number>(0);
+  const [profitMarginPercent, setProfitMarginPercent] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -54,6 +55,7 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
       storeAPI.getById(storeId).then(res => {
         setGstRate(res.data.gstRate || 0);
         setDiscountRate(res.data.discountRate || 0);
+        setProfitMarginPercent(res.data.profitMarginPercent || 0);
       });
     } else {
       const loadStores = async () => {
@@ -74,6 +76,7 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
       storeAPI.getById(selectedStore).then(res => {
         setGstRate(res.data.gstRate || 0);
         setDiscountRate(res.data.discountRate || 0);
+        setProfitMarginPercent(res.data.profitMarginPercent || 0);
       });
     }
   }, [selectedStore]);
@@ -114,14 +117,26 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
           setCart(updatedCart);
         } else {
           // Add new item
-          const base = quantityInput * product.price;
+          // Determine effective unit price for store
+          let unitPrice = product.price;
+          if (selectedStore) {
+            try {
+              const eff = await storeAPI.getEffectivePrice(selectedStore, product.sku);
+              unitPrice = eff.data?.effectivePrice ?? product.price;
+            } catch {
+              unitPrice = product.price + (product.price * (profitMarginPercent || 0) / 100);
+            }
+          } else {
+            unitPrice = product.price + (product.price * (profitMarginPercent || 0) / 100);
+          }
+          const base = quantityInput * unitPrice;
           const computedDiscount = (base * (discountRate || 0)) / 100;
           const computedGst = ((base - computedDiscount) * gstRate) / 100;
           const newItem: CartItem = {
             sku: product.sku,
             itemName: product.itemName,
             quantity: quantityInput,
-            pricePerUnit: product.price,
+            pricePerUnit: unitPrice,
             gst: computedGst,
             discount: computedDiscount,
             totalAmount: base - computedDiscount + computedGst
@@ -163,14 +178,26 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
           updatedCart[existingItemIndex] = existing;
           setCart(updatedCart);
         } else {
-          const base = product.price;
+          // Determine effective unit price for store
+          let unitPrice = product.price;
+          if (selectedStore) {
+            try {
+              const eff = await storeAPI.getEffectivePrice(selectedStore, product.sku);
+              unitPrice = eff.data?.effectivePrice ?? product.price;
+            } catch {
+              unitPrice = product.price + (product.price * (profitMarginPercent || 0) / 100);
+            }
+          } else {
+            unitPrice = product.price + (product.price * (profitMarginPercent || 0) / 100);
+          }
+          const base = unitPrice;
           const computedDiscount = (base * (discountRate || 0)) / 100;
           const computedGst = ((base - computedDiscount) * gstRate) / 100;
           const newItem: CartItem = {
             sku: product.sku,
             itemName: product.itemName,
             quantity: 1,
-            pricePerUnit: product.price,
+            pricePerUnit: unitPrice,
             gst: computedGst,
             discount: computedDiscount,
             totalAmount: base - computedDiscount + computedGst

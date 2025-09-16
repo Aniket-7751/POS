@@ -61,6 +61,19 @@ function App() {
     return () => window.removeEventListener('storeThemeUpdated', handler as EventListener);
   }, []);
 
+  // Listen for complete store settings update (e.g., profit margin)
+  React.useEffect(() => {
+    const handler = (e: any) => {
+      try {
+        if (e?.detail?.store) {
+          localStorage.setItem('store', JSON.stringify(e.detail.store));
+        }
+      } catch {}
+    };
+    window.addEventListener('storeSettingsUpdated', handler as EventListener);
+    return () => window.removeEventListener('storeSettingsUpdated', handler as EventListener);
+  }, []);
+
   const isOrganizationUser = user?.userType === 'organization';
   const isStoreUser = user?.userType === 'store';
 

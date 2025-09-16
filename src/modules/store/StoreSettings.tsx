@@ -40,6 +40,7 @@ const StoreSettings: React.FC<StoreSettingsProps> = ({ storeId }) => {
     try {
       await storeAPI.update(store._id || store.storeId, {
         discountRate: store.discountRate ?? 0,
+        profitMarginPercent: (store as any).profitMarginPercent ?? 0,
         theme: store.theme || 'light'
       });
       setMessage('Settings saved');
@@ -51,12 +52,15 @@ const StoreSettings: React.FC<StoreSettingsProps> = ({ storeId }) => {
         localStorage.setItem('store', JSON.stringify(res.data));
       } catch {}
       window.dispatchEvent(new CustomEvent('storeThemeUpdated', { detail: { theme: res.data.theme || 'light' } }));
+      // Broadcast full store settings update (includes profitMarginPercent)
+      window.dispatchEvent(new CustomEvent('storeSettingsUpdated', { detail: { store: res.data } }));
     } catch (err: any) {
       setMessage(err.response?.data?.error || 'Save failed');
     } finally {
       setSaving(false);
     }
   };
+
 
   if (!store) {
     return (
@@ -90,6 +94,11 @@ const StoreSettings: React.FC<StoreSettingsProps> = ({ storeId }) => {
             <div style={{ fontSize: 12, color: '#6c6c6c', marginTop: 6 }}>Optional global discount applied at POS.</div>
           </div>
           <div style={{ flex: 1 }}>
+            <label style={{ fontWeight: 500 }}>Profit Margin (%)</label>
+            <input name="profitMarginPercent" type="number" min={0} max={1000} step={0.01} value={(store as any).profitMarginPercent ?? 0} onChange={handleChange} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+            <div style={{ fontSize: 12, color: '#6c6c6c', marginTop: 6 }}>Added on top of base price for all SKUs when no per-SKU override exists.</div>
+          </div>
+          <div style={{ flex: 1 }}>
             <label style={{ fontWeight: 500 }}>Theme</label>
             <select name="theme" value={store.theme || 'light'} onChange={handleChange} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}>
               <option value="light">Light</option>
@@ -98,6 +107,7 @@ const StoreSettings: React.FC<StoreSettingsProps> = ({ storeId }) => {
             <div style={{ fontSize: 12, color: '#6c6c6c', marginTop: 6 }}>Personalize the POS look & feel.</div>
           </div>
         </div>
+
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
           <button onClick={handleSave} disabled={saving} style={{ padding: '10px 20px', background: '#6c3fc5', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer' }}>
             {saving ? 'Saving...' : 'Save Settings'}
