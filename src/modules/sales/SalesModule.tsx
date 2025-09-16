@@ -99,6 +99,18 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
     }
   };
 
+  const getPaymentPillStyle = (method: string) => {
+    switch (method) {
+      case 'UPI':
+        return { background: '#22c55e', color: 'white' };
+      case 'card':
+        return { background: '#dbeafe', color: '#1d4ed8' };
+      case 'cash':
+      default:
+        return { background: '#f1f5f9', color: '#334155' };
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ 
@@ -237,7 +249,7 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
         }}>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr',
+            gridTemplateColumns: '2fr 1.2fr 0.8fr 1.2fr 1.2fr 1fr',
             background: '#f8f9fa',
             padding: '16px 20px',
             borderBottom: '1px solid #e9ecef',
@@ -248,54 +260,67 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
             <div>Transaction ID</div>
             <div>Date & Time</div>
             <div>Items</div>
-            <div>Payment Method</div>
+            <div style={{ textAlign: 'center' }}>Payment Method</div>
             <div>Customer</div>
-            <div>Total Amount</div>
+            <div style={{ textAlign: 'right' }}>Total Amount</div>
           </div>
           
-          {sales.map((sale) => (
+          {sales.map((sale, index) => (
             <div
               key={sale._id}
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr',
+                gridTemplateColumns: '2fr 1.2fr 0.8fr 1.2fr 1.2fr 1fr',
                 padding: '16px 20px',
                 borderBottom: '1px solid #f1f3f4',
                 cursor: 'pointer',
-                transition: 'background-color 0.2s'
+                transition: 'background-color 0.2s',
+                alignItems: 'center',
+                background: index % 2 === 0 ? 'white' : '#fcfcfd'
               }}
               onClick={() => setSelectedSale(sale)}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = '#f8f9fa';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'white';
+                e.currentTarget.style.backgroundColor = index % 2 === 0 ? 'white' : '#fcfcfd';
               }}
             >
               <div style={{ fontWeight: '500', color: '#e53e3e' }}>
                 {sale.transactionId || 'N/A'}
               </div>
-              <div style={{ color: '#666', fontSize: '13px' }}>
-                {formatDateTime(sale.dateTime || '')}
+              <div style={{ color: '#666', fontSize: 13, lineHeight: 1.2 }}>
+                <div>{new Date(sale.dateTime || '').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                <div style={{ fontSize: 12, color: '#9aa0a6' }}>{new Date(sale.dateTime || '').toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
               </div>
               <div style={{ color: '#666' }}>
                 {(sale.items || []).length} item{(sale.items || []).length !== 1 ? 's' : ''}
               </div>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '6px',
-                color: getPaymentMethodColor(sale.paymentMethod || 'cash')
-              }}>
-                <span>{getPaymentMethodIcon(sale.paymentMethod || 'cash')}</span>
-                <span style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: '500' }}>
-                  {sale.paymentMethod || 'cash'}
-                </span>
-              </div>
+              {(() => {
+                const method = sale.paymentMethod || 'cash';
+                const pill = getPaymentPillStyle(method);
+                return (
+                  <div style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: 6,
+                    color: pill.color,
+                    background: pill.background,
+                    padding: '4px 10px',
+                    borderRadius: 999,
+                    justifySelf: 'center'
+                  }}>
+                    <span style={{ fontSize: 12 }}>{getPaymentMethodIcon(method)}</span>
+                    <span style={{ textTransform: 'uppercase', fontSize: 12, fontWeight: 600 }}>
+                      {method}
+                    </span>
+                  </div>
+                );
+              })()}
               <div style={{ color: '#666', fontSize: '13px' }}>
                 {sale.customerDetails?.name || 'Walk-in Customer'}
               </div>
-              <div style={{ fontWeight: '600', color: '#38a169' }}>
+              <div style={{ fontWeight: '600', color: '#38a169', textAlign: 'right' }}>
                 {formatCurrency(sale.grandTotal || 0)}
               </div>
             </div>

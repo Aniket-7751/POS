@@ -68,7 +68,8 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
     let newValue = value;
     let errorMsg = '';
 
-<<<<<<< HEAD
+    
+
     // if (name === 'storeId') {
     //   // Only allow alphanumeric
     //   if (/[^a-zA-Z0-9]/.test(value)) {
@@ -76,14 +77,8 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
     //     newValue = value.replace(/[^a-zA-Z0-9]/g, '');
     //   }
     // }
-=======
-    if (name === 'storeId') {
-      if (/[^a-zA-Z0-9]/.test(value)) {
-        errorMsg = 'Special characters not allowed';
-        newValue = value.replace(/[^a-zA-Z0-9]/g, '');
-      }
-    }
->>>>>>> 8e45fd19c02f2679da401e4a0c9aeccad741e5cb
+
+
     if (name === 'contactPersonName') {
       if (/[^a-zA-Z\s]/.test(value)) {
         errorMsg = 'Only alphabets allowed';
