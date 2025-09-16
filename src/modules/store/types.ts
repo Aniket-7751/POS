@@ -13,6 +13,8 @@ export interface Store {
   createdAt?: string;
   updatedAt?: string;
   gstRate?: number;
+  discountRate?: number;
+  theme?: 'light' | 'dark';
 }
 
 // New interface for the enhanced store creation response
