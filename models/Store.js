@@ -12,7 +12,8 @@ const storeSchema = new mongoose.Schema({
   email: { type: String, required: true },
   storePicture: { type: String }, // URL or path to store picture
   status: { type: String, enum: ['active', 'inactive'], default: 'active' },
-  organizationId: { type: String, ref: 'Organization', required: true }
+  organizationId: { type: String, ref: 'Organization', required: true },
+  gstRate: { type: Number, required: true, default: 18 }, // Fixed GST rate in percent
 }, { timestamps: true, _id: false });
 
 module.exports = mongoose.model('Store', storeSchema);

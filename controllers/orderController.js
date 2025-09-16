@@ -57,21 +57,28 @@ exports.updateOrderStatus = async (req, res) => {
       const catalogueItems = await Catalogue.find({ sku: { $in: skus }, organizationId: store.organizationId });
       console.log('Catalogue items found:', catalogueItems.map(c => ({ sku: c.sku, price: c.price, org: c.organizationId })));
       console.log('Order items:', order.items);
-      // Build invoice items with price, and check for missing catalogue items
+      // Build invoice items with price and GST using store gstRate; check for missing catalogue items
       let missingItems = [];
+      let gstTotal = 0;
       const invoiceItems = order.items.map(item => {
         const cat = catalogueItems.find(c => c.sku === item.sku);
         if (!cat) {
           missingItems.push(item.sku);
         }
+        const quantity = item.quantity;
+        const pricePerUnit = cat ? cat.price : 0;
+        const itemSubTotal = pricePerUnit * quantity;
+        const discount = 0;
+        const itemGst = ((itemSubTotal - discount) * (store.gstRate || 0)) / 100;
+        gstTotal += itemGst;
         return {
           sku: item.sku,
           itemName: item.itemName,
-          quantity: item.quantity,
-          pricePerUnit: cat ? cat.price : 0,
-          gst: 0,
-          discount: 0,
-          totalAmount: (cat ? cat.price : 0) * item.quantity
+          quantity,
+          pricePerUnit,
+          gst: itemGst,
+          discount,
+          totalAmount: itemSubTotal - discount + itemGst
         };
       });
       if (missingItems.length > 0) {

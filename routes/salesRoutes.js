@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const salesController = require('../controllers/salesController');
+console.log(salesController);
 
 // Transaction routes
 router.get('/', salesController.getAllSales);
@@ -12,7 +13,7 @@ router.get('/store/:storeId', salesController.getTransactionsByStore);
 router.get('/date-range', salesController.getSalesByDateRange);
 router.get('/transaction-id/:transactionId', salesController.getSalesByTransactionId);
 router.get('/stats', salesController.getSalesStats);
-router.get('/today', salesController.getTodaysSales);
+//router.get('/today', salesController.getTodaysSales);
 router.get('/payment-method/:paymentMethod', salesController.getSalesByPaymentMethod);
 
 // Product lookup routes (for POS interface)
