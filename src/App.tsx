@@ -9,6 +9,7 @@ import NoticeHeader from './components/NoticeHeader';
 
 import OrganizationModule from './modules/organization/OrganizationModule';
 import StoreModule from './modules/store/StoreModule';
+import StoreSettings from './modules/store/StoreSettings';
 import CategoryModule from './modules/inventory/category/CategoryModule';
 import CatalogueModule from './modules/inventory/catalogue/CatalogueModule';
 import AdminDashboard from './modules/admin/AdminDashboard';
@@ -17,7 +18,7 @@ import StoreOrders from './modules/store/orders/StoreOrders';
 import SalesModule from './modules/sales/SalesModule';
 import BarcodeList from './modules/inventory/catalogue/BarcodeList';
 
-type Page = 'admin' | 'admin-orders' | 'pos' | 'organization' | 'store' | 'inventory' | 'category' | 'catalogue' | 'sales' | 'store-orders' | 'barcodes';
+type Page = 'admin' | 'admin-orders' | 'pos' | 'organization' | 'store' | 'inventory' | 'category' | 'catalogue' | 'sales' | 'store-orders' | 'barcodes' | 'store-settings';
           {/* Barcode Section for Org */}
 
 interface User {
@@ -36,6 +37,18 @@ function App() {
   const [token, setToken] = React.useState<string | null>(localStorage.getItem('token'));
   const [resetToken, setResetToken] = React.useState<string | null>(null);
   const [showNoticeHeader, setShowNoticeHeader] = React.useState<boolean>(true);
+
+  // Theme hooks must be after all state declarations
+  const [theme, setTheme] = React.useState<string>('light');
+  React.useEffect(() => {
+    const storeData = localStorage.getItem('store');
+    if (storeData) {
+      try {
+        const store = JSON.parse(storeData);
+        if (store.theme) setTheme(store.theme);
+      } catch {}
+    }
+  }, [page]);
 
   const isOrganizationUser = user?.userType === 'organization';
   const isStoreUser = user?.userType === 'store';
@@ -143,7 +156,7 @@ function App() {
 
   // Guard against invalid page selection for current role
   React.useEffect(() => {
-    if (isStoreUser && page !== 'pos' && page !== 'sales' && page !== 'store-orders') {
+    if (isStoreUser && page !== 'pos' && page !== 'sales' && page !== 'store-orders' && page !== 'store-settings') {
       setPage('pos');
     }
     if (isOrganizationUser && page === 'pos') {
@@ -179,8 +192,9 @@ function App() {
   if (!user || !token) {
     return <LoginSelector onLogin={handleLogin} />;
   }
+
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f6fa', display: 'flex' }}>
+    <div className={theme === 'dark' ? 'theme-dark' : 'theme-light'} style={{ minHeight: '100vh', background: theme === 'dark' ? '#222' : '#f5f6fa', color: theme === 'dark' ? '#fff' : undefined, display: 'flex' }}>
       <aside style={{ 
         width: 280, 
         background: '#1a1a1a', 
@@ -477,6 +491,26 @@ function App() {
                   <span style={{ fontSize: '16px' }}>📦</span>
                   My Orders
                 </button>
+                <button style={{
+                  width: '100%',
+                  margin: '0 0 8px 0',
+                  padding: '12px 16px',
+                  background: page==='store-settings' ? '#e53e3e' : 'transparent',
+                  color: page==='store-settings' ? '#fff' : '#ccc',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  textAlign: 'left'
+                }} onClick={() => setPage('store-settings')}>
+                  <span style={{ fontSize: '16px' }}>⚙️</span>
+                  Settings
+                </button>
               </>
             )}
             <button style={{ 
@@ -616,6 +650,9 @@ function App() {
           <SalesModule
             storeId={user.userType === 'store' ? user.store?._id : undefined}
           />
+        )}
+        {page === 'store-settings' && user.userType === 'store' && (
+          <StoreSettings storeId={user.store?._id} />
         )}
       </main>
     </div>
