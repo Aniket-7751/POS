@@ -37,6 +37,7 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
   const [selectedStore, setSelectedStore] = useState<string>(storeId || '');
   const [stores, setStores] = useState<any[]>([]);
   const [gstRate, setGstRate] = useState<number>(0);
+  const [discountRate, setDiscountRate] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -52,6 +53,7 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
       // Fetch GST rate for the store
       storeAPI.getById(storeId).then(res => {
         setGstRate(res.data.gstRate || 0);
+        setDiscountRate(res.data.discountRate || 0);
       });
     } else {
       const loadStores = async () => {
@@ -71,6 +73,7 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
     if (selectedStore) {
       storeAPI.getById(selectedStore).then(res => {
         setGstRate(res.data.gstRate || 0);
+        setDiscountRate(res.data.discountRate || 0);
       });
     }
   }, [selectedStore]);
@@ -102,22 +105,26 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
           const existing = { ...updatedCart[existingItemIndex] };
           existing.quantity += quantityInput;
           const itemSubTotal = existing.quantity * existing.pricePerUnit;
-          const itemDiscount = existing.discount || 0;
+          const itemDiscount = ((itemSubTotal) * (discountRate || 0)) / 100;
           const itemGst = ((itemSubTotal - itemDiscount) * gstRate) / 100;
           existing.gst = itemGst;
           existing.totalAmount = itemSubTotal - itemDiscount + itemGst;
+          existing.discount = itemDiscount;
           updatedCart[existingItemIndex] = existing;
           setCart(updatedCart);
         } else {
           // Add new item
+          const base = quantityInput * product.price;
+          const computedDiscount = (base * (discountRate || 0)) / 100;
+          const computedGst = ((base - computedDiscount) * gstRate) / 100;
           const newItem: CartItem = {
             sku: product.sku,
             itemName: product.itemName,
             quantity: quantityInput,
             pricePerUnit: product.price,
-            gst: ((quantityInput * product.price) * gstRate) / 100,
-            discount: 0,
-            totalAmount: quantityInput * product.price + (((quantityInput * product.price) * gstRate) / 100)
+            gst: computedGst,
+            discount: computedDiscount,
+            totalAmount: base - computedDiscount + computedGst
           };
           setCart([...cart, newItem]);
         }
@@ -148,21 +155,25 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
           const existing = { ...updatedCart[existingItemIndex] };
           existing.quantity += 1;
           const itemSubTotal = existing.quantity * existing.pricePerUnit;
-          const itemDiscount = existing.discount || 0;
+          const itemDiscount = (itemSubTotal * (discountRate || 0)) / 100;
           const itemGst = ((itemSubTotal - itemDiscount) * gstRate) / 100;
           existing.gst = itemGst;
+          existing.discount = itemDiscount;
           existing.totalAmount = itemSubTotal - itemDiscount + itemGst;
           updatedCart[existingItemIndex] = existing;
           setCart(updatedCart);
         } else {
+          const base = product.price;
+          const computedDiscount = (base * (discountRate || 0)) / 100;
+          const computedGst = ((base - computedDiscount) * gstRate) / 100;
           const newItem: CartItem = {
             sku: product.sku,
             itemName: product.itemName,
             quantity: 1,
             pricePerUnit: product.price,
-            gst: (product.price * gstRate) / 100,
-            discount: 0,
-            totalAmount: product.price + ((product.price * gstRate) / 100)
+            gst: computedGst,
+            discount: computedDiscount,
+            totalAmount: base - computedDiscount + computedGst
           };
           setCart([...cart, newItem]);
         }
@@ -188,9 +199,10 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
       if (item.sku === sku) {
         const updatedItem = { ...item, quantity: newQuantity };
         const itemSubTotal = updatedItem.quantity * updatedItem.pricePerUnit;
-        const itemDiscount = updatedItem.discount || 0;
+        const itemDiscount = (itemSubTotal * (discountRate || 0)) / 100;
         const itemGst = ((itemSubTotal - itemDiscount) * gstRate) / 100;
         updatedItem.gst = itemGst;
+        updatedItem.discount = itemDiscount;
         updatedItem.totalAmount = itemSubTotal - itemDiscount + itemGst;
         return updatedItem;
       }
@@ -199,21 +211,22 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
     setCart(updatedCart);
   };
 
-  // Recompute GST for all cart items when store gstRate changes
+  // Recompute discount & GST for all cart items when rates change
   useEffect(() => {
     if (cart.length === 0) return;
     const recomputed = cart.map(item => {
       const itemSubTotal = item.quantity * item.pricePerUnit;
-      const itemDiscount = item.discount || 0;
+      const itemDiscount = (itemSubTotal * (discountRate || 0)) / 100;
       const itemGst = ((itemSubTotal - itemDiscount) * gstRate) / 100;
       return {
         ...item,
         gst: itemGst,
+        discount: itemDiscount,
         totalAmount: itemSubTotal - itemDiscount + itemGst
       };
     });
     setCart(recomputed);
-  }, [gstRate]);
+  }, [gstRate, discountRate]);
 
   // Process payment
   const processPayment = async () => {
