@@ -313,29 +313,9 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      minHeight: 'calc(100vh - 80px)', 
-      background: '#f5f6fa',
-      fontFamily: 'Arial, sans-serif',
-      padding: '20px',
-      boxSizing: 'border-box',
-      gap: '20px',
-      maxWidth: '100%',
-      overflow: 'hidden'
-    }}>
+    <div className="pos-container">
       {/* Left Panel - Product Scanning */}
-      <div style={{ 
-        width: '48%', 
-        minWidth: '400px',
-        padding: '20px', 
-        background: '#fff',
-        borderRadius: '8px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden'
-      }}>
+      <div className="pos-left">
         <h2 style={{ marginBottom: '20px', color: '#333' }}>POS Interface</h2>
         
         {/* Barcode Scanner Input */}
@@ -509,17 +489,7 @@ const POSInterface: React.FC<POSInterfaceProps> = ({ storeId, storeName }) => {
       </div>
 
       {/* Right Panel - Cart and Checkout */}
-      <div style={{ 
-        width: '52%', 
-        minWidth: '400px',
-        padding: '20px',
-        background: '#fff',
-        borderRadius: '8px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden'
-      }}>
+      <div className="pos-right">
         <h2 style={{ marginBottom: '20px', color: '#333' }}>Shopping Cart</h2>
         
         {/* Cart Items */}

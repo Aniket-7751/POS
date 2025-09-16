@@ -194,21 +194,12 @@ function App() {
   }
 
   return (
-    <div className={theme === 'dark' ? 'theme-dark' : 'theme-light'} style={{ minHeight: '100vh', background: theme === 'dark' ? '#222' : '#f5f6fa', color: theme === 'dark' ? '#fff' : undefined, display: 'flex' }}>
-      <aside style={{ 
-        width: 280, 
+    <div className={theme === 'dark' ? 'theme-dark app-shell' : 'theme-light app-shell'} style={{ background: theme === 'dark' ? '#222' : '#f5f6fa', color: theme === 'dark' ? '#fff' : undefined }}>
+      <aside className="app-aside" style={{ 
         background: '#1a1a1a', 
         color: '#fff',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
         padding: '0',
-        boxShadow: '2px 0 8px rgba(0,0,0,0.1)',
-        overflow: 'hidden',
-        zIndex: 1000
+        boxShadow: '2px 0 8px rgba(0,0,0,0.1)'
       }}>
         {/* Header Section */}
         <div style={{ 
@@ -617,7 +608,7 @@ function App() {
           )}
         </div>
       </aside>
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start', padding: '0', marginLeft: '280px', minHeight: '100vh', width: 'calc(100% - 280px)' }}>
+      <main className="app-main">
         {/* Notice Header - appears on all pages */}
         {showNoticeHeader && (
           <div style={{ position: 'relative', zIndex: 1000 }}>
