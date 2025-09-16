@@ -25,6 +25,7 @@ interface AddOrganizationPageProps {
 const AddOrganizationPage: React.FC<AddOrganizationPageProps> = ({ onBack, editId, editData }) => {
   const [form, setForm] = useState<Organization>(initialState);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [fieldErrors, setFieldErrors] = useState({
     contactNumber: '',
     contactPersonName: '',
@@ -151,6 +152,9 @@ const AddOrganizationPage: React.FC<AddOrganizationPageProps> = ({ onBack, editI
     e.preventDefault();
     if (!validate()) return;
     
+    setError('');
+    setSuccess('');
+    
     console.log('Form submission started:', { editId, form });
     
     try {
@@ -158,14 +162,20 @@ const AddOrganizationPage: React.FC<AddOrganizationPageProps> = ({ onBack, editI
         console.log('Calling updateOrganization API with:', { editId, form });
         await updateOrganization(editId, form);
         console.log('Update successful');
+        setSuccess('Organization updated successfully!');
       } else {
         console.log('Calling createOrganization API with:', form);
         await createOrganization(form);
         console.log('Create successful');
+        setSuccess('Organization added successfully!');
       }
-      setForm(initialState);
-      setLogoFile(null);
-      onBack();
+      
+      // Reset form after successful creation/update
+      setTimeout(() => {
+        setForm(initialState);
+        setLogoFile(null);
+        onBack();
+      }, 2000);
     } catch (error) {
       console.error('API call failed:', error);
       setError('Failed to save organization. Please try again.');
@@ -180,6 +190,38 @@ const AddOrganizationPage: React.FC<AddOrganizationPageProps> = ({ onBack, editI
         </div>
         <h1 style={{ fontWeight: 700, fontSize: 32, marginBottom: 8 }}>{editId ? 'Edit Organization' : 'Add Organization'}</h1>
         <div style={{ color: '#6c6c6c', marginBottom: 32 }}>{editId ? 'Edit the organization details' : 'Add a new organization to your POS system'}</div>
+        
+        {success && (
+          <div style={{ 
+            background: '#f0f9f0', 
+            border: '1px solid #4caf50', 
+            borderRadius: 8, 
+            padding: '12px 16px', 
+            marginBottom: 24, 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 12,
+            maxWidth: 900,
+            margin: '0 auto 24px auto'
+          }}>
+            <div style={{ 
+              width: 20, 
+              height: 20, 
+              background: '#4caf50', 
+              borderRadius: '50%', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="white"/>
+              </svg>
+            </div>
+            <span style={{ color: '#2e7d32', fontWeight: 500 }}>{success}</span>
+          </div>
+        )}
+        
         <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 2px 12px #e6e6e6', padding: 40, maxWidth: 900, margin: '0 auto' }}>
           <form onSubmit={handleSubmit}>
             <div style={{ fontWeight: 700, fontSize: 22, marginBottom: 24 }}>Company Information</div>
