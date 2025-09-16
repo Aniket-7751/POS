@@ -67,44 +67,37 @@ const StoreModule: React.FC = () => {
           </thead>
           <tbody>
             {stores.map(store => {
-              // console.log('Rendering store item:', store.storeName, 'image:', store.storePicture);
-              const imageSource = store.storePicture && store.storePicture.startsWith('data:image') ? store.storePicture : `http://localhost:5000${store.storePicture}`;
+              const defaultImg = '/download (1).png';
+              let imageSrc: string = defaultImg;
+              if (store.storePicture) {
+                if (
+                  store.storePicture.startsWith('data:image') ||
+                  store.storePicture.startsWith('http') ||
+                  store.storePicture.startsWith('/')
+                ) {
+                  imageSrc = store.storePicture;
+                } else {
+                  imageSrc = `http://localhost:5000${store.storePicture}`;
+                }
+              }
               return (
                 <tr key={store._id} style={{ borderBottom: '1px solid #f0f0f0', fontSize: 14 }}>
                   <td style={{ padding: 14 }}>
-                    {store.storePicture ? (
-                      <img
-                        key={`${store._id}-${store.storePicture}`}
-                        src={imageSource}
-                        alt={store.storeName}
-                        style={{
-                          width: 50,
-                          height: 50,
-                          objectFit: 'cover',
-                          borderRadius: 8,
-                          border: '1px solid #ddd'
-                        }}
-                        onError={(e) => {
-                          // console.log('Store image failed to load:', store.storePicture);
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <div style={{
+                    <img
+                      key={`${store._id}-${store.storePicture || 'default'}`}
+                      src={imageSrc}
+                      alt={store.storeName}
+                      style={{
                         width: 50,
                         height: 50,
-                        backgroundColor: '#f5f5f5',
+                        objectFit: 'cover',
                         borderRadius: 8,
-                        border: '1px solid #ddd',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#999',
-                        fontSize: 12
-                      }}>
-                        No Image
-                      </div>
-                    )}
+                        border: '1px solid #ddd'
+                      }}
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = defaultImg;
+                      }}
+                    />
                   </td>
                   <td style={{ padding: 14, color: '#111827', fontWeight: 500 }}>{store.storeName}</td>
                   <td style={{ padding: 14 }}>{store.storeId}</td>
