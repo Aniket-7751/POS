@@ -77,6 +77,10 @@ export const storeAPI = {
     return api.put(`/stores/${id}`, data);
   },
   delete: (id: string) => api.delete(`/stores/${id}`),
+  // Store pricing overrides
+  listPrices: (storeId: string, sku?: string) => api.get(`/stores/${storeId}/prices${sku ? `?sku=${encodeURIComponent(sku)}` : ''}`),
+  upsertPrice: (storeId: string, sku: string, data: any) => api.put(`/stores/${storeId}/prices/${sku}`, data),
+  getEffectivePrice: (storeId: string, sku: string) => api.get(`/stores/${storeId}/prices/${sku}/effective`),
 };
 
 // Category API

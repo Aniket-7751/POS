@@ -67,10 +67,12 @@ const CategoryModule: React.FC = () => {
 
   return (
     <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 2px 12px #e6e6e6', padding: 24, width: 1100, margin: '40px auto' }}>
-      <h2 style={{ fontWeight: 700, fontSize: 28, marginBottom: 18 }}>Categories</h2>
-      <button style={{ marginBottom: 18, padding: '10px 28px', background: '#7c4dff', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 17, cursor: 'pointer', boxShadow: '0 2px 8px #e6e6e6' }} onClick={() => setShowAdd(true)}>
-        + Add Category
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 18 }}>
+        <h2 style={{ fontWeight: 700, fontSize: 28, margin: 0 }}>Categories</h2>
+        <button style={{ padding: '10px 28px', background: '#7c4dff', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 17, cursor: 'pointer', boxShadow: '0 2px 8px #e6e6e6', whiteSpace: 'nowrap' }} onClick={() => setShowAdd(true)}>
+          + Add Category
+        </button>
+      </div>
       <div style={{ width: '100%', height: 520, overflowY: 'auto', borderRadius: 10, border: '1px solid #f0f0f0', background: '#fff' }}>
         <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
           <thead>

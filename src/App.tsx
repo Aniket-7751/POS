@@ -1,4 +1,5 @@
 import React from 'react';
+import { FiGrid, FiClipboard, FiBriefcase, FiHome, FiPackage, FiTag, FiShoppingCart, FiSettings, FiBarChart2, FiLogOut } from 'react-icons/fi';
 
 import './App.css';
 
@@ -42,6 +43,7 @@ function App() {
   const [signupStoreId, setSignupStoreId] = React.useState<string | null>(null);
   const [signupEmail, setSignupEmail] = React.useState<string | null>(null);
   const [signupToken, setSignupToken] = React.useState<string | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState<boolean>(false);
 
   // Theme hooks must be after all state declarations
   const [theme, setTheme] = React.useState<string>('light');
@@ -54,6 +56,28 @@ function App() {
       } catch {}
     }
   }, [page]);
+
+  // Listen for theme changes from StoreSettings
+  React.useEffect(() => {
+    const handler = (e: any) => {
+      if (e?.detail?.theme) setTheme(e.detail.theme);
+    };
+    window.addEventListener('storeThemeUpdated', handler as EventListener);
+    return () => window.removeEventListener('storeThemeUpdated', handler as EventListener);
+  }, []);
+
+  // Listen for complete store settings update (e.g., profit margin)
+  React.useEffect(() => {
+    const handler = (e: any) => {
+      try {
+        if (e?.detail?.store) {
+          localStorage.setItem('store', JSON.stringify(e.detail.store));
+        }
+      } catch {}
+    };
+    window.addEventListener('storeSettingsUpdated', handler as EventListener);
+    return () => window.removeEventListener('storeSettingsUpdated', handler as EventListener);
+  }, []);
 
   const isOrganizationUser = user?.userType === 'organization';
   const isStoreUser = user?.userType === 'store';
@@ -258,21 +282,12 @@ function App() {
   }
 
   return (
-    <div className={theme === 'dark' ? 'theme-dark' : 'theme-light'} style={{ minHeight: '100vh', background: theme === 'dark' ? '#222' : '#f5f6fa', color: theme === 'dark' ? '#fff' : undefined, display: 'flex' }}>
-      <aside style={{ 
-        width: 280, 
+    <div className={theme === 'dark' ? 'theme-dark app-shell' : 'theme-light app-shell'} style={{ background: theme === 'dark' ? '#111' : '#f5f6fa' }}>
+      <aside className={sidebarCollapsed ? 'app-aside collapsed' : 'app-aside'} style={{ 
         background: '#1a1a1a', 
         color: '#fff',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
         padding: '0',
-        boxShadow: '2px 0 8px rgba(0,0,0,0.1)',
-        overflow: 'hidden',
-        zIndex: 1000
+        boxShadow: '2px 0 8px rgba(0,0,0,0.1)'
       }}>
         {/* Header Section */}
         <div style={{ 
@@ -280,7 +295,7 @@ function App() {
           borderBottom: '1px solid #333',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: sidebarCollapsed ? 'center' : 'space-between'
         }}>
           <div style={{ 
             display: 'flex', 
@@ -298,24 +313,18 @@ function App() {
             }}>
               <span style={{ fontSize: '20px' }}>🐔</span>
             </div>
-            <div>
-              <div style={{ 
-                fontSize: '18px', 
-                fontWeight: '700', 
-                color: '#e53e3e',
-                lineHeight: '1.2'
-              }}>
-                SUGUNA CHICKEN
-              </div>
-              <div style={{ 
-                fontSize: '12px', 
-                color: '#38a169',
-                fontWeight: '500'
-              }}>
-                POS System
-              </div>
+            <div className="nav-text" style={{ display: sidebarCollapsed ? 'none' : 'block' }}>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: '#e53e3e', lineHeight: '1.2' }}>SUGUNA CHICKEN</div>
+              <div style={{ fontSize: '12px', color: '#38a169', fontWeight: '500' }}>POS System</div>
             </div>
           </div>
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="aside-toggle"
+          >
+            {sidebarCollapsed ? '»' : '«'}
+          </button>
         </div>
 
         {/* Navigation Content */}
@@ -323,12 +332,13 @@ function App() {
           flex: 1, 
           display: 'flex', 
           flexDirection: 'column', 
-          padding: '20px 0',
-          overflowY: 'auto'
+          padding: sidebarCollapsed ? '12px 0' : '20px 0',
+          overflowY: 'auto',
+          alignItems: sidebarCollapsed ? 'center' : undefined
         }}>
           {/* Dashboard Section */}
           {isOrganizationUser && (
-            <div style={{ padding: '0 20px 20px 20px' }}>
+            <div style={{ padding: sidebarCollapsed ? '0 8px 12px 8px' : '0 20px 20px 20px', width: '100%' }}>
               <button style={{
                 width: '100%',
                 margin: '0 0 8px 0',
@@ -345,9 +355,9 @@ function App() {
                 alignItems: 'center',
                 gap: '12px',
                 textAlign: 'left'
-              }} onClick={() => setPage('admin')}>
-                <span style={{ fontSize: '16px' }}>📊</span>
-                Admin Dashboard
+              }} onClick={() => setPage('admin')} title="Admin Dashboard">
+                <FiGrid size={18} />
+                <span className="nav-text">Admin Dashboard</span>
               </button>
               <button style={{
                 width: '100%',
@@ -365,9 +375,9 @@ function App() {
                 alignItems: 'center',
                 gap: '12px',
                 textAlign: 'left'
-              }} onClick={() => setPage('admin-orders')}>
-                <span style={{ fontSize: '16px' }}>�</span>
-                Order Requests
+              }} onClick={() => setPage('admin-orders')} title="Order Requests">
+                <FiClipboard size={18} />
+                <span className="nav-text">Order Requests</span>
               </button>
             </div>
           )}
@@ -375,9 +385,10 @@ function App() {
           {/* Master Data Section */}
           {isOrganizationUser && (
             <div style={{ 
-              padding: '0 20px 10px 20px'
+              padding: sidebarCollapsed ? '0 8px 10px 8px' : '0 20px 10px 20px',
+              width: '100%'
             }}>
-              <div style={{ 
+              <div className="section-title" style={{ 
                 fontSize: '12px', 
                 fontWeight: '600', 
                 color: '#888', 
@@ -404,9 +415,9 @@ function App() {
                 alignItems: 'center',
                 gap: '12px',
                 textAlign: 'left'
-              }} onClick={() => setPage('organization')}>
-                <span style={{ fontSize: '16px' }}>🏢</span>
-                Organization
+              }} onClick={() => setPage('organization')} title="Organization">
+                <FiBriefcase size={18} />
+                <span className="nav-text">Organization</span>
               </button>
               <button style={{ 
                 width: '100%', 
@@ -424,9 +435,9 @@ function App() {
                 alignItems: 'center',
                 gap: '12px',
                 textAlign: 'left'
-              }} onClick={() => setPage('store')}>
-                <span style={{ fontSize: '16px' }}>🏪</span>
-                Store
+              }} onClick={() => setPage('store')} title="Store">
+                <FiHome size={18} />
+                <span className="nav-text">Store</span>
               </button>
             </div>
           )}
@@ -434,9 +445,10 @@ function App() {
           {/* Inventory Section */}
           {isOrganizationUser && (
           <div style={{ 
-            padding: '0 20px 10px 20px'
+            padding: sidebarCollapsed ? '0 8px 10px 8px' : '0 20px 10px 20px',
+            width: '100%'
           }}>
-            <div style={{ 
+            <div className="section-title" style={{ 
               fontSize: '12px', 
               fontWeight: '600', 
               color: '#888', 
@@ -462,9 +474,9 @@ function App() {
               alignItems: 'center',
               gap: '12px',
               textAlign: 'left'
-            }} onClick={() => setPage('category')}>
-              <span style={{ fontSize: '16px' }}>📂</span>
-              Category
+            }} onClick={() => setPage('category')} title="Category">
+              <FiGrid size={18} />
+              <span className="nav-text">Category</span>
             </button>
             <button style={{ 
               width: '100%', 
@@ -482,9 +494,9 @@ function App() {
               alignItems: 'center',
               gap: '12px',
               textAlign: 'left'
-            }} onClick={() => setPage('catalogue')}>
-              <span style={{ fontSize: '16px' }}>📦</span>
-              Catalogue
+            }} onClick={() => setPage('catalogue')} title="Catalogue">
+              <FiPackage size={18} />
+              <span className="nav-text">Catalogue</span>
             </button>
             <button style={{
                 width: '100%',
@@ -502,16 +514,17 @@ function App() {
                 alignItems: 'center',
                 gap: '12px',
                 textAlign: 'left'
-              }} onClick={() => setPage('barcodes')}>
-                <span style={{ fontSize: '16px' }}>🏷️</span>
-                Barcode List
+              }} onClick={() => setPage('barcodes')} title="Barcode List">
+                <FiTag size={18} />
+                <span className="nav-text">Barcode List</span>
             </button>
           </div>
           )}
 
           {/* POS Interface */}
           <div style={{ 
-            padding: '0 20px 10px 20px'
+            padding: sidebarCollapsed ? '0 8px 10px 8px' : '0 20px 10px 20px',
+            width: '100%'
           }}>
             {isStoreUser && (
               <>
@@ -531,9 +544,9 @@ function App() {
                   alignItems: 'center',
                   gap: '12px',
                   textAlign: 'left'
-                }} onClick={() => setPage('pos')}>
-                  <span style={{ fontSize: '16px' }}>🛒</span>
-                  POS Interface
+                }} onClick={() => setPage('pos')} title="POS Interface">
+                  <FiShoppingCart size={18} />
+                  <span className="nav-text">POS Interface</span>
                 </button>
                 <button style={{
                   width: '100%',
@@ -551,9 +564,9 @@ function App() {
                   alignItems: 'center',
                   gap: '12px',
                   textAlign: 'left'
-                }} onClick={() => setPage('store-orders')}>
-                  <span style={{ fontSize: '16px' }}>📦</span>
-                  My Orders
+                }} onClick={() => setPage('store-orders')} title="My Orders">
+                  <FiClipboard size={18} />
+                  <span className="nav-text">My Orders</span>
                 </button>
                 <button style={{
                   width: '100%',
@@ -571,9 +584,9 @@ function App() {
                   alignItems: 'center',
                   gap: '12px',
                   textAlign: 'left'
-                }} onClick={() => setPage('store-settings')}>
-                  <span style={{ fontSize: '16px' }}>⚙️</span>
-                  Settings
+                }} onClick={() => setPage('store-settings')} title="Settings">
+                  <FiSettings size={18} />
+                  <span className="nav-text">Settings</span>
                 </button>
               </>
             )}
@@ -593,95 +606,120 @@ function App() {
               alignItems: 'center',
               gap: '12px',
               textAlign: 'left'
-            }} onClick={() => setPage('sales')}>
-              <span style={{ fontSize: '16px' }}>📊</span>
-              My Sales
+            }} onClick={() => setPage('sales')} title="Sales">
+              <FiBarChart2 size={18} />
+              <span className="nav-text">Sales</span>
             </button>
           </div>
         </div>
 
-        {/* User Info - Fixed at Bottom */}
+        {/* User / Logout - Fixed at Bottom */}
         <div style={{ 
           padding: '20px',
           borderTop: '1px solid #333',
           background: '#1a1a1a'
         }}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '12px',
-            marginBottom: '12px'
-          }}>
-            <div style={{ 
-              width: '40px', 
-              height: '40px', 
-              background: 'linear-gradient(45deg, #e53e3e, #38a169)', 
-              borderRadius: '50%', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              fontSize: '16px'
-            }}>
-              {user.name.charAt(0).toUpperCase()}
+          {sidebarCollapsed ? (
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <button
+                onClick={handleLogout}
+                title="Logout"
+                style={{
+                  width: 40,
+                  height: 40,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'transparent',
+                  color: '#ccc',
+                  border: '1px solid #333',
+                  borderRadius: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                <FiLogOut size={18} />
+              </button>
             </div>
-            <div style={{ flex: 1 }}>
+          ) : (
+            <>
               <div style={{ 
-                fontSize: '14px', 
-                fontWeight: '600', 
-                color: '#fff',
-                marginBottom: '2px'
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '12px',
+                marginBottom: '12px'
               }}>
-                {user.name}
+                <div style={{ 
+                  width: '40px', 
+                  height: '40px', 
+                  background: 'linear-gradient(45deg, #e53e3e, #38a169)', 
+                  borderRadius: '50%', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  fontSize: '16px'
+                }}>
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ 
+                    fontSize: '14px', 
+                    fontWeight: '600', 
+                    color: '#fff',
+                    marginBottom: '2px'
+                  }}>
+                    {user.name}
+                  </div>
+                  <div style={{ 
+                    fontSize: '11px', 
+                    color: '#888',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    {user.userType === 'organization' ? 'Organization' : 'Store'} - {user.role}
+                  </div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    padding: '8px',
+                    background: 'transparent',
+                    color: '#888',
+                    border: '1px solid #333',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    const target = e.target as HTMLButtonElement;
+                    target.style.background = '#e53e3e';
+                    target.style.color = '#fff';
+                    target.style.borderColor = '#e53e3e';
+                  }}
+                  onMouseOut={(e) => {
+                    const target = e.target as HTMLButtonElement;
+                    target.style.background = 'transparent';
+                    target.style.color = '#888';
+                    target.style.borderColor = '#333';
+                  }}
+                >
+                  Logout
+                </button>
               </div>
-              <div style={{ 
-                fontSize: '11px', 
-                color: '#888',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                {user.userType === 'organization' ? 'Organization' : 'Store'} - {user.role}
-              </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              style={{
-                padding: '8px',
-                background: 'transparent',
-                color: '#888',
-                border: '1px solid #333',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseOver={(e) => {
-                const target = e.target as HTMLButtonElement;
-                target.style.background = '#e53e3e';
-                target.style.color = '#fff';
-                target.style.borderColor = '#e53e3e';
-              }}
-              onMouseOut={(e) => {
-                const target = e.target as HTMLButtonElement;
-                target.style.background = 'transparent';
-                target.style.color = '#888';
-                target.style.borderColor = '#333';
-              }}
-            >
-              Logout
-            </button>
-          </div>
-          {(user.organization || user.store) && (
-            <div style={{ 
-              fontSize: '12px', 
-              color: '#666',
-              paddingLeft: '52px'
-            }}>
-              {user.organization ? user.organization.organizationName : user.store?.storeName}
-            </div>
+              {(user.organization || user.store) && (
+                <div style={{ 
+                  fontSize: '12px', 
+                  color: '#666',
+                  paddingLeft: '52px'
+                }}>
+                  {user.organization ? user.organization.organizationName : user.store?.storeName}
+                </div>
+              )}
+            </>
           )}
         </div>
       </aside>
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start', padding: '0', marginLeft: '280px', minHeight: '100vh', width: 'calc(100% - 280px)' }}>
+      <main className={sidebarCollapsed ? 'app-main collapsed' : 'app-main'}>
         {/* Notice Header - appears on all pages */}
         {showNoticeHeader && (
           <div style={{ position: 'relative', zIndex: 1000 }}>
