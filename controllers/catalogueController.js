@@ -1,9 +1,33 @@
+// Endpoint to generate itemId and sku
+exports.generateIds = (req, res) => {
+  const sku = `SKU${Math.floor(100000 + Math.random() * 900000)}`;
+  const itemId = `ITEM${Math.floor(100000 + Math.random() * 900000)}`;
+  res.json({ sku, itemId });
+};
 const Catalogue = require('../models/Catalogue');
 const path = require('path');
 
 exports.createCatalogue = async (req, res) => {
   try {
     const catalogueData = { ...req.body };
+    // Autogenerate SKU and Item ID if not provided
+    const skuArr = await Catalogue.find({}, 'sku').sort({ sku: -1 }).limit(1);
+    const itemArr = await Catalogue.find({}, 'itemId').sort({ itemId: -1 }).limit(1);
+    let nextSkuNum = 1;
+    let nextItemNum = 1;
+    if (skuArr.length > 0) {
+      const lastSku = skuArr[0].sku;
+      const match = lastSku.match(/SKU(\d+)/);
+      if (match) nextSkuNum = parseInt(match[1], 10) + 1;
+    }
+    if (itemArr.length > 0) {
+      const lastItem = itemArr[0].itemId;
+      const match = lastItem.match(/ITEM(\d+)/);
+      if (match) nextItemNum = parseInt(match[1], 10) + 1;
+    }
+    catalogueData.sku = `SKU${nextSkuNum.toString().padStart(3, '0')}`;
+    catalogueData.itemId = `ITEM${nextItemNum.toString().padStart(3, '0')}`;
+    catalogueData._id = catalogueData.itemId;
     
     // Parse nested fields sent as strings (e.g., from forms)
     if (typeof catalogueData.nutritionValue === 'string') {
@@ -73,7 +97,18 @@ exports.createCatalogue = async (req, res) => {
 
 exports.getAllCatalogues = async (req, res) => {
   try {
-    const catalogues = await Catalogue.find();
+    let query = {};
+    if (req.query.search) {
+      const search = req.query.search.trim();
+      // Search by SKU id or Item Name (case-insensitive)
+      query = {
+        $or: [
+          { sku: { $regex: search, $options: 'i' } },
+          { itemName: { $regex: search, $options: 'i' } }
+        ]
+      };
+    }
+    const catalogues = await Catalogue.find(query);
     console.log('Retrieved catalogues:', catalogues.length, 'items');
     catalogues.forEach(cat => {
       console.log(`- ${cat.itemName}: image=${cat.image}, thumbnail=${cat.thumbnail}`);

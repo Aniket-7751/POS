@@ -1,3 +1,28 @@
+// Endpoint to generate categoryId
+exports.generateCategoryId = (req, res) => {
+  // Find the highest categoryId and increment
+  const Category = require('../models/Category');
+  Category.find({}, 'categoryId')
+    .sort({ categoryId: -1 })
+    .limit(1)
+    .then(categories => {
+      let nextNumber = 1;
+      if (categories.length > 0) {
+        // Extract number from CATxxx
+        const lastId = categories[0].categoryId;
+        const match = lastId.match(/CAT(\d+)/);
+        if (match) {
+          nextNumber = parseInt(match[1], 10) + 1;
+        }
+      }
+      // Pad with leading zeros to 3 digits
+      const categoryId = `CAT${nextNumber.toString().padStart(3, '0')}`;
+      res.json({ categoryId });
+    })
+    .catch(err => {
+      res.status(500).json({ error: 'Failed to generate categoryId' });
+    });
+};
 const Category = require('../models/Category');
 
 exports.createCategory = async (req, res) => {
@@ -15,7 +40,18 @@ exports.createCategory = async (req, res) => {
 
 exports.getAllCategories = async (req, res) => {
   try {
-    const categories = await Category.find();
+    let query = {};
+    if (req.query.search) {
+      const search = req.query.search.trim();
+      // Search by SKU id or Item Name (case-insensitive)
+      query = {
+        $or: [
+          { categoryId: { $regex: search, $options: 'i' } },
+          { categoryName: { $regex: search, $options: 'i' } }
+        ]
+      };
+    }
+    const categories = await Category.find(query);
     res.json(categories);
   } catch (err) {
     res.status(500).json({ error: err.message });
