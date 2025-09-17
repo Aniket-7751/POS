@@ -10,6 +10,8 @@ const CatalogueModule: React.FC = () => {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [viewCatalogue, setViewCatalogue] = useState<Catalogue | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchLoading, setSearchLoading] = useState(false);
 
   const handleView = async (cat: Catalogue) => {
     setViewLoading(true);
@@ -43,7 +45,14 @@ const CatalogueModule: React.FC = () => {
   const fetchCatalogues = async () => {
     setLoading(true);
     try {
-      const res = await getCatalogues();
+      let res;
+      if (searchTerm.trim()) {
+        setSearchLoading(true);
+        res = await getCatalogues({ search: searchTerm });
+        setSearchLoading(false);
+      } else {
+        res = await getCatalogues();
+      }
       // Sort by createdAt descending (newest first)
       const sorted = (res.data as Catalogue[]).sort((a, b) => {
         if (!a.createdAt || !b.createdAt) return 0;
@@ -59,7 +68,7 @@ const CatalogueModule: React.FC = () => {
 
   useEffect(() => {
     fetchCatalogues();
-  }, []);
+  }, [searchTerm]);
 
   const handleDelete = async (id: string) => {
     await deleteCatalogue(id);
@@ -203,7 +212,22 @@ const CatalogueModule: React.FC = () => {
         </div>
       )}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-        <h2 style={{ fontWeight: 700, fontSize: 28 }}>Catalogue</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+          <h2 style={{ fontWeight: 700, fontSize: 28 }}>Catalogue</h2>
+          <input
+            type="text"
+            placeholder="Search by SKU ID or Item Name"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 8,
+              border: '1px solid #ccc',
+              fontSize: 16,
+              minWidth: 260
+            }}
+          />
+        </div>
         <button style={{ padding: '10px 28px', background: '#7c4dff', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 17, cursor: 'pointer', boxShadow: '0 2px 8px #e6e6e6' }} onClick={() => setShowAdd(true)}>
           + Add Catalogue
         </button>
@@ -313,13 +337,6 @@ const CatalogueModule: React.FC = () => {
                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#2980b9', display: 'flex', alignItems: 'center', height: '100%' }}
                   >
                     <FaEdit size={22} />
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(cat._id!)} 
-                    title="Delete" 
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#e74c3c', display: 'flex', alignItems: 'center', height: '100%' }}
-                  >
-                    <FaTrash size={22} />
                   </button>
                 </td>
               </tr>
