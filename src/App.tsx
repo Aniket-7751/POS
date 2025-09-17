@@ -5,6 +5,7 @@ import './App.css';
 
 import POSInterface from './pages/POSInterface';
 import LoginSelector from './components/LoginSelector';
+import SignupSelector from './components/SignupSelector';
 import ResetPassword from './components/ResetPassword';
 import NoticeHeader from './components/NoticeHeader';
 
@@ -38,6 +39,10 @@ function App() {
   const [token, setToken] = React.useState<string | null>(localStorage.getItem('token'));
   const [resetToken, setResetToken] = React.useState<string | null>(null);
   const [showNoticeHeader, setShowNoticeHeader] = React.useState<boolean>(true);
+  const [showSignup, setShowSignup] = React.useState<boolean>(false);
+  const [signupStoreId, setSignupStoreId] = React.useState<string | null>(null);
+  const [signupEmail, setSignupEmail] = React.useState<string | null>(null);
+  const [signupToken, setSignupToken] = React.useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState<boolean>(false);
 
   // Theme hooks must be after all state declarations
@@ -139,31 +144,65 @@ function App() {
     localStorage.removeItem('userType');
   };
 
-  // Check for reset password token in URL
+  // Check for reset password token and signup parameters in URL
   React.useEffect(() => {
     console.log('Current URL:', window.location.href);
     console.log('Current search params:', window.location.search);
     console.log('Current pathname:', window.location.pathname);
     
-    let resetToken = null;
-    
-    // Try to get token from query parameters first
     const urlParams = new URLSearchParams(window.location.search);
-    resetToken = urlParams.get('token');
+    const rawToken = urlParams.get('token');
+    const storeId = urlParams.get('storeId');
+    const signupEmailParam = urlParams.get('email');
+    // If storeId or email are present and token is present, treat token as signup token.
+    const signupTokenParam = urlParams.get('signupToken') || ((storeId || signupEmailParam) ? rawToken : null);
+    const resetTokenParam = (storeId || signupEmailParam) ? null : rawToken;
     
-    // If not found in query params, try to extract from pathname
-    if (!resetToken && window.location.pathname.includes('/reset-password')) {
-      const pathParams = new URLSearchParams(window.location.pathname.split('?')[1] || '');
-      resetToken = pathParams.get('token');
+    // 1) Reset password takes priority
+    if (
+      window.location.pathname.includes('/reset-password') ||
+      (!!resetTokenParam && !storeId && !signupEmailParam && !signupTokenParam)
+    ) {
+      console.log('Reset password URL detected with token:', resetTokenParam);
+      if (resetTokenParam) {
+        localStorage.setItem('resetToken', resetTokenParam);
+        setResetToken(resetTokenParam);
+      }
+      window.history.replaceState({}, document.title, '/');
+      return;
+    }
+
+    // 2) Signup link (explicit /signup or has storeId or has both email+signupToken)
+    if (
+      window.location.pathname.includes('/signup') ||
+      storeId ||
+      signupEmailParam ||
+      signupTokenParam
+    ) {
+      console.log('Signup URL detected with params:', { storeId, signupEmailParam, signupTokenParam });
+      setSignupStoreId(storeId);
+      setSignupEmail(signupEmailParam);
+      setSignupToken(signupTokenParam);
+      setShowSignup(true);
+      // Ensure we are not considered authenticated while in signup flow
+      setUser(null);
+      setToken(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userType');
+      // Clean up the URL - redirect to root
+      window.history.replaceState({}, document.title, '/');
+      return;
     }
     
-    console.log('Extracted token:', resetToken);
-    
-    if (resetToken) {
-      console.log('Reset token found in URL:', resetToken);
+    // 3) Fallback: Check for reset token stored previously
+    if (resetTokenParam) {
+      console.log('Reset token found in URL (fallback):', resetTokenParam);
       // Store the token for the reset password component
-      localStorage.setItem('resetToken', resetToken);
-      setResetToken(resetToken);
+      localStorage.setItem('resetToken', resetTokenParam);
+      setResetToken(resetTokenParam);
       // Clean up the URL - redirect to root
       window.history.replaceState({}, document.title, '/');
       console.log('Token stored in localStorage');
@@ -208,6 +247,31 @@ function App() {
           // Optional: navigate to root
           window.history.replaceState({}, document.title, '/');
         }} 
+      />
+    );
+  }
+
+  // Show signup page if signup URL is detected
+  if (showSignup) {
+    return (
+      <SignupSelector 
+        onBackToLogin={() => {
+          setShowSignup(false);
+          setSignupStoreId(null);
+          setSignupEmail(null);
+          setSignupToken(null);
+          // Always land on login page: clear any existing auth
+          setUser(null);
+          setToken(null);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          localStorage.removeItem('userId');
+          localStorage.removeItem('userRole');
+          localStorage.removeItem('userType');
+        }}
+        storeId={signupStoreId || null}
+        email={signupEmail || null}
+        token={signupToken || null}
       />
     );
   }
