@@ -5,17 +5,22 @@ interface SignupFormProps {
   signupType: 'organization' | 'store';
   onBackToLogin: () => void;
   onBackToSignupSelector?: () => void;
+  storeId?: string | null;
+  emailFromLink?: string | null;
+  tokenFromLink?: string | null;
 }
 
 
-const SignupForm: React.FC<SignupFormProps> = ({ signupType, onBackToLogin, onBackToSignupSelector }) => {
+const SignupForm: React.FC<SignupFormProps> = ({ signupType, onBackToLogin, onBackToSignupSelector, storeId, emailFromLink, tokenFromLink }) => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: '',
     organizationId: '',
-    storeId: ''
+    storeId: storeId || ''
   });
+  const [signupToken, setSignupToken] = useState<string | null>(tokenFromLink || null);
+  const [verifying, setVerifying] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -36,6 +41,37 @@ const SignupForm: React.FC<SignupFormProps> = ({ signupType, onBackToLogin, onBa
     hasNumber: false,
     hasSpecialChar: false
   });
+
+  // Update storeId when prop changes
+  React.useEffect(() => {
+    if (storeId) {
+      setFormData(prev => ({ ...prev, storeId: storeId }));
+    }
+  }, [storeId]);
+
+  // Prefill email from link
+  React.useEffect(() => {
+    if (emailFromLink) {
+      setFormData(prev => ({ ...prev, email: emailFromLink }));
+    }
+  }, [emailFromLink]);
+
+  // Verify token when provided
+  React.useEffect(() => {
+    const verify = async () => {
+      if (signupType === 'store' && storeId && emailFromLink && tokenFromLink) {
+        try {
+          setVerifying(true);
+          await authAPI.verifyStoreSignupToken({ email: emailFromLink, storeId, token: tokenFromLink });
+        } catch (e: any) {
+          setError(e.response?.data?.message || 'Invalid or expired signup link');
+        } finally {
+          setVerifying(false);
+        }
+      }
+    };
+    verify();
+  }, [signupType, storeId, emailFromLink, tokenFromLink]);
 
   // Show password requirements only when typing and not all satisfied
   const showPasswordRequirements = formData.password.length > 0 && 
@@ -130,6 +166,11 @@ const SignupForm: React.FC<SignupFormProps> = ({ signupType, onBackToLogin, onBa
     }
 
     // Check password
+    if (signupType === 'store' && !signupToken) {
+      setError('Signup link token is missing. Please use the email link to sign up.');
+      return false;
+    }
+
     if (!formData.password) {
       newFieldErrors.password = 'Password is required';
       isValid = false;
@@ -194,15 +235,16 @@ const SignupForm: React.FC<SignupFormProps> = ({ signupType, onBackToLogin, onBa
         response = await authAPI.storeSignup({
           storeId: formData.storeId,
           email: formData.email,
-          password: formData.password
+          password: formData.password,
+          token: signupToken || undefined
         });
       }
 
       console.log('Signup response:', response.data);
-      
-      setSuccess(`${signupType === 'organization' ? 'Organization' : 'Store'} signup successful! You can now login.`);
-      
-      // Clear form
+
+      setSuccess(`${signupType === 'organization' ? 'Organization' : 'Store'} signup successful! Please login to continue.`);
+
+      // Clear form and ensure no auth state persists
       setFormData({
         email: '',
         password: '',
@@ -220,6 +262,12 @@ const SignupForm: React.FC<SignupFormProps> = ({ signupType, onBackToLogin, onBa
         setCountdown(timeLeft);
         if (timeLeft <= 0) {
           clearInterval(countdownInterval);
+          // Guarantee landing on login screen
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          localStorage.removeItem('userId');
+          localStorage.removeItem('userRole');
+          localStorage.removeItem('userType');
           onBackToLogin();
         }
       }, 1000);
@@ -299,7 +347,10 @@ const SignupForm: React.FC<SignupFormProps> = ({ signupType, onBackToLogin, onBa
           {signupType === 'organization' ? 'Organization' : 'Store'} Signup
         </h2>
         <p style={{ color: '#666', fontSize: '14px', margin: '0' }}>
-          Create your {signupType === 'organization' ? 'organization admin' : 'store user'} account
+          {storeId 
+            ? `Complete your store account setup for Store ID: ${storeId}`
+            : `Create your ${signupType === 'organization' ? 'organization admin' : 'store user'} account`
+          }
         </p>
       </div>
 
@@ -314,7 +365,8 @@ const SignupForm: React.FC<SignupFormProps> = ({ signupType, onBackToLogin, onBa
             color: '#333',
             fontSize: '14px'
           }}>
-            {signupType === 'organization' ? 'Organization ID *' : 'Store ID *'}
+            {signupType === 'organization' ? 'Organization ID' : 'Store ID'}
+            <span style={{ color: '#dc2626', marginLeft: '4px' }}>*</span>
           </label>
           <input
             type="text"
@@ -322,6 +374,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ signupType, onBackToLogin, onBa
             value={signupType === 'organization' ? formData.organizationId : formData.storeId}
             onChange={handleInputChange}
             placeholder={signupType === 'organization' ? 'Enter Organization ID' : 'Enter Store ID'}
+            disabled={signupType === 'store' && !!storeId}
             style={{ 
               width: '100%', 
               padding: '14px 16px', 
@@ -329,7 +382,9 @@ const SignupForm: React.FC<SignupFormProps> = ({ signupType, onBackToLogin, onBa
               borderRadius: '8px', 
               fontSize: '16px',
               transition: 'border-color 0.2s ease',
-              boxSizing: 'border-box'
+              boxSizing: 'border-box',
+              background: (signupType === 'store' && !!storeId) ? '#f5f5f5' : 'white',
+              color: (signupType === 'store' && !!storeId) ? '#666' : 'black'
             }}
             onFocus={(e) => e.target.style.borderColor = '#6c3fc5'}
             onBlur={(e) => e.target.style.borderColor = (signupType === 'organization' ? fieldErrors.organizationId : fieldErrors.storeId) ? '#dc2626' : '#e1e5e9'}
@@ -355,7 +410,9 @@ const SignupForm: React.FC<SignupFormProps> = ({ signupType, onBackToLogin, onBa
           }}>
             {signupType === 'organization' 
               ? 'Enter the Organization ID provided by your administrator'
-              : 'Enter the Store ID provided by your organization admin'
+              : storeId 
+                ? 'Store ID pre-filled from your signup link'
+                : 'Enter the Store ID provided by your organization admin'
             }
           </div>
         </div>
@@ -370,6 +427,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ signupType, onBackToLogin, onBa
             fontSize: '14px'
           }}>
             Email Address
+            <span style={{ color: '#dc2626', marginLeft: '4px' }}>*</span>
           </label>
           <input
             type="email"
@@ -377,6 +435,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ signupType, onBackToLogin, onBa
             value={formData.email}
             onChange={handleInputChange}
             placeholder="Enter your email"
+            disabled={!!emailFromLink}
             style={{ 
               width: '100%', 
               padding: '14px 16px', 
@@ -384,7 +443,9 @@ const SignupForm: React.FC<SignupFormProps> = ({ signupType, onBackToLogin, onBa
               borderRadius: '8px', 
               fontSize: '16px',
               transition: 'border-color 0.2s ease',
-              boxSizing: 'border-box'
+              boxSizing: 'border-box',
+              background: emailFromLink ? '#f5f5f5' : 'white',
+              color: emailFromLink ? '#666' : 'black'
             }}
             onFocus={(e) => e.target.style.borderColor = '#6c3fc5'}
             onBlur={(e) => e.target.style.borderColor = fieldErrors.email ? '#dc2626' : '#e1e5e9'}
@@ -414,6 +475,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ signupType, onBackToLogin, onBa
             fontSize: '14px'
           }}>
             Password
+            <span style={{ color: '#dc2626', marginLeft: '4px' }}>*</span>
           </label>
           <input
             type="password"
@@ -536,6 +598,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ signupType, onBackToLogin, onBa
             fontSize: '14px'
           }}>
             Confirm Password
+            <span style={{ color: '#dc2626', marginLeft: '4px' }}>*</span>
           </label>
           <input
             type="password"
@@ -585,12 +648,12 @@ const SignupForm: React.FC<SignupFormProps> = ({ signupType, onBackToLogin, onBa
           <strong>Debug:</strong> Field errors: {JSON.stringify(fieldErrors)}
         </div> */}
 
-        {/* Error Message */}
-        {error && (
+        {/* Error / Verifying Message */}
+        {(verifying || error) && (
           <div style={{ 
-            background: '#fef2f2', 
-            border: '1px solid #fecaca',
-            color: '#dc2626', 
+            background: verifying ? '#eff6ff' : '#fef2f2', 
+            border: verifying ? '1px solid #bfdbfe' : '1px solid #fecaca',
+            color: verifying ? '#1d4ed8' : '#dc2626', 
             padding: '12px 16px', 
             borderRadius: '8px', 
             marginBottom: '20px',
@@ -598,7 +661,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ signupType, onBackToLogin, onBa
             textAlign: 'center',
             fontWeight: '500'
           }}>
-            ⚠️ {error}
+            {verifying ? 'Verifying your signup link...' : `⚠️ ${error}`}
           </div>
         )}
 
