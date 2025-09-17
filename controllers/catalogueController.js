@@ -10,12 +10,19 @@ exports.createCatalogue = async (req, res) => {
       try { catalogueData.nutritionValue = JSON.parse(catalogueData.nutritionValue); } catch (_) {}
     }
 
-    // Accept base64 images directly via JSON
-    if (catalogueData.image && typeof catalogueData.image === 'string' && catalogueData.image.startsWith('data:image')) {
-      // keep as-is (base64 data URL)
+    // Normalize images array from JSON (base64 or URLs)
+    if (catalogueData.images && typeof catalogueData.images === 'string') {
+      try { catalogueData.images = JSON.parse(catalogueData.images); } catch (_) {}
     }
-    if (catalogueData.thumbnail && typeof catalogueData.thumbnail === 'string' && catalogueData.thumbnail.startsWith('data:image')) {
-      // keep as-is (base64 data URL)
+    if (catalogueData.images && !Array.isArray(catalogueData.images)) {
+      catalogueData.images = [catalogueData.images];
+    }
+    // Accept base64 images directly via JSON for legacy single fields
+    if (catalogueData.image && typeof catalogueData.image === 'string') {
+      // keep as-is (base64 data URL or path)
+    }
+    if (catalogueData.thumbnail && typeof catalogueData.thumbnail === 'string') {
+      // keep as-is (base64 data URL or path)
     }
 
     console.log('Creating catalogue with data (pre-files):', { ...catalogueData, image: !!catalogueData.image, thumbnail: !!catalogueData.thumbnail });
@@ -31,6 +38,20 @@ exports.createCatalogue = async (req, res) => {
         catalogueData.thumbnail = `/uploads/${req.files.thumbnail[0].filename}`;
         console.log('Thumbnail path set:', catalogueData.thumbnail);
       }
+      if (req.files.images) {
+        const paths = req.files.images.map(f => `/uploads/${f.filename}`);
+        catalogueData.images = Array.isArray(catalogueData.images) ? [...catalogueData.images, ...paths] : paths;
+        console.log('Images array set:', catalogueData.images);
+      }
+    }
+
+    // Backward compatibility: if only single image provided, set images array
+    if ((!catalogueData.images || catalogueData.images.length === 0) && catalogueData.image) {
+      catalogueData.images = [catalogueData.image];
+    }
+    // Default thumbnail to first image if not provided
+    if (!catalogueData.thumbnail && Array.isArray(catalogueData.images) && catalogueData.images.length > 0) {
+      catalogueData.thumbnail = catalogueData.images[0];
     }
     
     // Use itemId as the _id
@@ -78,6 +99,14 @@ exports.updateCatalogueById = async (req, res) => {
   try {
     const catalogueData = { ...req.body };
     
+    // Normalize images array
+    if (catalogueData.images && typeof catalogueData.images === 'string') {
+      try { catalogueData.images = JSON.parse(catalogueData.images); } catch (_) {}
+    }
+    if (catalogueData.images && !Array.isArray(catalogueData.images)) {
+      catalogueData.images = [catalogueData.images];
+    }
+
     // Handle image uploads if files are present
     if (req.files) {
       if (req.files.image) {
@@ -86,13 +115,17 @@ exports.updateCatalogueById = async (req, res) => {
       if (req.files.thumbnail) {
         catalogueData.thumbnail = `/uploads/${req.files.thumbnail[0].filename}`;
       }
+      if (req.files.images) {
+        const paths = req.files.images.map(f => `/uploads/${f.filename}`);
+        catalogueData.images = Array.isArray(catalogueData.images) ? [...catalogueData.images, ...paths] : paths;
+      }
     }
     
-    // Accept base64 images directly via JSON
-    if (catalogueData.image && typeof catalogueData.image === 'string' && catalogueData.image.startsWith('data:image')) {
+    // Accept base64 images directly via JSON for legacy single fields
+    if (catalogueData.image && typeof catalogueData.image === 'string') {
       // keep as-is
     }
-    if (catalogueData.thumbnail && typeof catalogueData.thumbnail === 'string' && catalogueData.thumbnail.startsWith('data:image')) {
+    if (catalogueData.thumbnail && typeof catalogueData.thumbnail === 'string') {
       // keep as-is
     }
 
@@ -109,6 +142,15 @@ exports.updateCatalogueById = async (req, res) => {
     if (typeof catalogueData.expiry === 'number') {
       catalogueData.expiry = `${catalogueData.expiry} hours`;
     }
+    // Backward compatibility: if only single image provided, set images array
+    if ((!catalogueData.images || catalogueData.images.length === 0) && catalogueData.image) {
+      catalogueData.images = [catalogueData.image];
+    }
+    // Default thumbnail to first image if not provided
+    if (!catalogueData.thumbnail && Array.isArray(catalogueData.images) && catalogueData.images.length > 0) {
+      catalogueData.thumbnail = catalogueData.images[0];
+    }
+
     const catalogue = await Catalogue.findByIdAndUpdate(req.params.id, catalogueData, { new: true });
     if (!catalogue) return res.status(404).json({ error: 'Not found' });
     res.json(catalogue);

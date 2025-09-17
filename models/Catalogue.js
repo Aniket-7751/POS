@@ -22,8 +22,11 @@ const catalogueSchema = new mongoose.Schema({
   stock: { type: Number, default: 0 },
   barcode: { type: String },
   status: { type: String, enum: ['active', 'inactive'], default: 'active' },
+  // Deprecated single image field retained for backward compatibility
   image: { type: String }, // image URL or path
-  thumbnail: { type: String }, // thumbnail URL or path
+  // New: support multiple images
+  images: [{ type: String }], // array of image URLs/paths or base64 data URLs
+  thumbnail: { type: String }, // thumbnail URL or path (one of images)
   instructions: { type: String },
   expiry: { type: String }, // e.g., '24 hours' or '24 days'
   organizationId: { type: String, ref: 'Organization', required: true }
