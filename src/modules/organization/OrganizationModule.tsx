@@ -9,10 +9,19 @@ const OrganizationModule: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Organization | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchOrganizations = async () => {
-    const res = await getOrganizations();
-    setOrganizations(res.data);
+    setLoading(true);
+    try {
+      const res = await getOrganizations();
+      setOrganizations(res.data);
+    } catch (error) {
+      console.error('Failed to fetch organizations:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -25,8 +34,18 @@ const OrganizationModule: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    await deleteOrganization(id);
-    fetchOrganizations();
+    setDeletingId(id);
+    try {
+      await deleteOrganization(id);
+      // Optimistic update - remove from UI immediately
+      setOrganizations(prev => prev.filter(org => org._id !== id));
+    } catch (error) {
+      console.error('Failed to delete organization:', error);
+      // Refresh data if delete failed
+      fetchOrganizations();
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const handleEmailClick = (email: string, e: React.MouseEvent) => {
@@ -43,6 +62,14 @@ const OrganizationModule: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8f9fb', padding: 32 }}>
+      <style>
+        {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontWeight: 700, fontSize: 32, marginBottom: 8, color: '#1a1a1a' }}>Organizations</h1>
@@ -67,65 +94,97 @@ const OrganizationModule: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {organizations.map(org => (
-                <tr key={org._id} style={{ borderBottom: '1px solid #f1f3f4', fontSize: 14 }}>
-                  <td style={{ padding: 14 }}>{org.organizationName}</td>
-                  <td style={{ padding: 14 }}>{org.organizationId}</td>
-                  <td style={{ padding: 14 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: '50%',
-                        background: '#6d4cff',
-                        color: '#fff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 12,
-                        fontWeight: 700
-                      }}>
-                        {(() => {
-                          const name = (org.contactPersonName || '').trim();
-                          const parts = name.split(/\s+/).filter(Boolean);
-                          const initials = (parts[0]?.[0] || '') + (parts[1]?.[0] || '');
-                          return initials.toUpperCase();
-                        })()}
-                      </div>
-                      <span>{org.contactPersonName}</span>
+              {loading ? (
+                <tr>
+                  <td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#6c6c6c' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                      <div style={{ width: 20, height: 20, border: '2px solid #e5e7eb', borderTop: '2px solid #7c4dff', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                      Loading organizations...
                     </div>
                   </td>
-                  <td style={{ padding: 14 }}>{org.contactNumber}</td>
-                  <td style={{ padding: 14 }}>
-                    <a href={`mailto:${org.email}`} onClick={e => handleEmailClick(org.email, e)} style={{ color: '#2563eb', textDecoration: 'none' }}>{org.email}</a>
-                  </td>
-                  <td style={{ padding: 14 }}>{org.gstNumber}</td>
-                  <td style={{ padding: 14, textAlign: 'center' }}>
-                    <button
-                      onClick={() => handleEdit(org)}
-                      title="Edit"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', marginRight: 14, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" stroke="#6b7280" strokeWidth="1.5" fill="none"/>
-                        <path d="M20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="#6b7280"/>
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => handleDelete(org._id!)}
-                      title="Delete"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M6 7h12" stroke="#6b7280" strokeWidth="1.5" strokeLinecap="round"/>
-                        <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" stroke="#6b7280" strokeWidth="1.5"/>
-                        <path d="M8 7h8l-1 12a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2L8 7z" stroke="#6b7280" strokeWidth="1.5" fill="none"/>
-                        <path d="M10 11v6M14 11v6" stroke="#6b7280" strokeWidth="1.5" strokeLinecap="round"/>
-                      </svg>
-                    </button>
+                </tr>
+              ) : organizations.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#6c6c6c' }}>
+                    No organizations found
                   </td>
                 </tr>
-              ))}
+              ) : (
+                organizations.map(org => (
+                  <tr key={org._id} style={{ borderBottom: '1px solid #f1f3f4', fontSize: 14 }}>
+                    <td style={{ padding: 14 }}>{org.organizationName}</td>
+                    <td style={{ padding: 14 }}>{org.organizationId}</td>
+                    <td style={{ padding: 14 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: '50%',
+                          background: '#6d4cff',
+                          color: '#fff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 12,
+                          fontWeight: 700
+                        }}>
+                          {(() => {
+                            const name = (org.contactPersonName || '').trim();
+                            const parts = name.split(/\s+/).filter(Boolean);
+                            const initials = (parts[0]?.[0] || '') + (parts[1]?.[0] || '');
+                            return initials.toUpperCase();
+                          })()}
+                        </div>
+                        <span>{org.contactPersonName}</span>
+                      </div>
+                    </td>
+                    <td style={{ padding: 14 }}>{org.contactNumber}</td>
+                    <td style={{ padding: 14 }}>
+                      <a href={`mailto:${org.email}`} onClick={e => handleEmailClick(org.email, e)} style={{ color: '#2563eb', textDecoration: 'none' }}>{org.email}</a>
+                    </td>
+                    <td style={{ padding: 14 }}>{org.gstNumber}</td>
+                    <td style={{ padding: 14, textAlign: 'right' }}>
+                      <button
+                        onClick={() => handleEdit(org)}
+                        title="Edit"
+                        disabled={deletingId === org._id}
+                        style={{ 
+                          background: '#f3f4f6', 
+                          border: '1px solid #e5e7eb', 
+                          width: 32, 
+                          height: 32, 
+                          borderRadius: 6, 
+                          cursor: deletingId === org._id ? 'not-allowed' : 'pointer', 
+                          marginRight: 8,
+                          opacity: deletingId === org._id ? 0.5 : 1
+                        }}
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => handleDelete(org._id!)}
+                        title="Delete"
+                        disabled={deletingId === org._id}
+                        style={{ 
+                          background: deletingId === org._id ? '#f9fafb' : '#fef2f2', 
+                          border: deletingId === org._id ? '1px solid #e5e7eb' : '1px solid #fee2e2', 
+                          width: 32, 
+                          height: 32, 
+                          borderRadius: 6, 
+                          cursor: deletingId === org._id ? 'not-allowed' : 'pointer',
+                          opacity: deletingId === org._id ? 0.5 : 1
+                        }}
+                      >
+                        {deletingId === org._id ? (
+                          <div style={{ width: 12, height: 12, border: '2px solid #e5e7eb', borderTop: '2px solid #ef4444', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                        ) : (
+                          '🗑️'
+                        )}
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
