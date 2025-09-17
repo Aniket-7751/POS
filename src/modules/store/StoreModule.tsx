@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { getStores, updateStore, deleteStore } from './storeApi';
+import { FaEdit, FaToggleOn, FaToggleOff } from 'react-icons/fa';
+import { getStores, updateStore } from './storeApi';
 import { Store } from './types';
 import AddStorePage from './AddStorePage';
 
@@ -24,9 +25,18 @@ const StoreModule: React.FC = () => {
   };
 
 
-  const handleDelete = async (id: string) => {
-    await deleteStore(id);
-    fetchStores();
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  const handleToggleStatus = async (store: Store) => {
+    if (!store._id) return;
+    setTogglingId(store._id);
+    try {
+      const newStatus = store.status === 'active' ? 'inactive' : 'active';
+      await updateStore(store._id, { status: newStatus } as any);
+      setStores(prev => prev.map(s => s._id === store._id ? { ...s, status: newStatus } as Store : s));
+    } finally {
+      setTogglingId(null);
+    }
   };
 
   const handleEmailClick = (email: string, e: React.MouseEvent) => {
@@ -120,20 +130,16 @@ const StoreModule: React.FC = () => {
                       {store.status.toUpperCase()}
                     </span>
                   </td>
-                  <td style={{ padding: 14, textAlign: 'right' }}>
-                    <button
-                      onClick={() => handleEdit(store)}
-                      title="Edit"
-                      style={{ background: '#f3f4f6', border: '1px solid #e5e7eb', width: 32, height: 32, borderRadius: 6, cursor: 'pointer', marginRight: 8 }}
-                    >
-                      ✏️
+                  <td style={{ padding: 14, textAlign: 'right', display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                    <button onClick={() => handleToggleStatus(store)} title="Toggle Status" style={{ background: 'none', border: 'none', cursor: togglingId === store._id ? 'not-allowed' : 'pointer', padding: 0 }}>
+                      {togglingId === store._id ? (
+                        <div style={{ width: 16, height: 16, border: '2px solid #e5e7eb', borderTop: '2px solid #7c4dff', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                      ) : (
+                        store.status === 'active' ? <FaToggleOn size={26} color="#38a169" /> : <FaToggleOff size={26} color="#c62828" />
+                      )}
                     </button>
-                    <button
-                      onClick={() => handleDelete(store._id!)}
-                      title="Delete"
-                      style={{ background: '#fef2f2', border: '1px solid #fee2e2', width: 32, height: 32, borderRadius: 6, cursor: 'pointer' }}
-                    >
-                      🗑️
+                    <button onClick={() => handleEdit(store)} title="Edit" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#2980b9' }}>
+                      <FaEdit size={22} />
                     </button>
                   </td>
                 </tr>

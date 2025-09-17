@@ -18,9 +18,10 @@ import AdminDashboard from './modules/admin/AdminDashboard';
 import AdminOrderRequests from './modules/admin/orders/AdminOrderRequests';
 import StoreOrders from './modules/store/orders/StoreOrders';
 import SalesModule from './modules/sales/SalesModule';
+import StoreDashboard from './modules/store/StoreDashboard';
 import BarcodeList from './modules/inventory/catalogue/BarcodeList';
 
-type Page = 'admin' | 'admin-orders' | 'pos' | 'organization' | 'store' | 'inventory' | 'category' | 'catalogue' | 'sales' | 'store-orders' | 'barcodes' | 'store-settings';
+type Page = 'admin' | 'admin-orders' | 'pos' | 'organization' | 'store' | 'inventory' | 'category' | 'catalogue' | 'sales' | 'store-orders' | 'barcodes' | 'store-settings' | 'store-dashboard';
           {/* Barcode Section for Org */}
 
 interface User {
@@ -219,7 +220,14 @@ function App() {
 
   // Guard against invalid page selection for current role
   React.useEffect(() => {
-    if (isStoreUser && page !== 'pos' && page !== 'sales' && page !== 'store-orders' && page !== 'store-settings') {
+    if (
+      isStoreUser &&
+      page !== 'pos' &&
+      page !== 'sales' &&
+      page !== 'store-orders' &&
+      page !== 'store-settings' &&
+      page !== 'store-dashboard'
+    ) {
       setPage('pos');
     }
     if (isOrganizationUser && page === 'pos') {
@@ -328,12 +336,14 @@ function App() {
         </div>
 
         {/* Navigation Content */}
-        <div style={{ 
-          flex: 1, 
-          display: 'flex', 
-          flexDirection: 'column', 
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
           padding: sidebarCollapsed ? '12px 0' : '20px 0',
           overflowY: 'auto',
+          overflowX: 'hidden',
+          maxWidth: '100%',
           alignItems: sidebarCollapsed ? 'center' : undefined
         }}>
           {/* Dashboard Section */}
@@ -532,6 +542,26 @@ function App() {
                   width: '100%',
                   margin: '0 0 8px 0',
                   padding: '12px 16px',
+                  background: page==='store-dashboard' ? '#e53e3e' : 'transparent',
+                  color: page==='store-dashboard' ? '#fff' : '#ccc',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  textAlign: 'left'
+                }} onClick={() => setPage('store-dashboard')} title="Store Dashboard">
+                  <FiGrid size={18} />
+                  <span className="nav-text">Store Dashboard</span>
+                </button>
+                <button style={{
+                  width: '100%',
+                  margin: '0 0 8px 0',
+                  padding: '12px 16px',
                   background: page==='pos' ? '#e53e3e' : 'transparent',
                   color: page==='pos' ? '#fff' : '#ccc',
                   border: 'none',
@@ -722,8 +752,8 @@ function App() {
         </div>
       </aside>
       <main className={sidebarCollapsed ? 'app-main collapsed' : 'app-main'}>
-        {/* Notice Header - appears on all pages */}
-        {showNoticeHeader && (
+        {/* Notice Header - only on POS interface page */}
+        {page === 'pos' && showNoticeHeader && (
           <div style={{ position: 'relative', zIndex: 1000 }}>
             <NoticeHeader 
               autoScroll={true}
@@ -736,9 +766,12 @@ function App() {
             />
           </div>
         )}
-  {page === 'admin' && <AdminDashboard />}
-  {page === 'admin-orders' && <AdminOrderRequests />}
-  {page === 'pos' && (
+        {page === 'admin' && <AdminDashboard />}
+        {page === 'admin-orders' && <AdminOrderRequests />}
+        {page === 'store-dashboard' && (
+          <StoreDashboard storeId={user.userType === 'store' ? user.store?._id : undefined} />
+        )}
+        {page === 'pos' && (
           <POSInterface
             storeId={user.userType === 'store' ? user.store?._id : undefined}
             storeName={user.userType === 'store' ? user.store?.storeName : undefined}
@@ -748,9 +781,9 @@ function App() {
         {page === 'store' && <StoreModule />}
         {page === 'category' && <CategoryModule />}
         {page === 'catalogue' && <CatalogueModule />}
-  {page === 'store-orders' && <StoreOrders />}
-  {page === 'barcodes' && <BarcodeList />}
-  {page === 'sales' && (
+        {page === 'store-orders' && <StoreOrders />}
+        {page === 'barcodes' && <BarcodeList />}
+        {page === 'sales' && (
           <SalesModule
             storeId={user.userType === 'store' ? user.store?._id : undefined}
           />
