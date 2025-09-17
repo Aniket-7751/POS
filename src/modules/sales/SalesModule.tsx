@@ -356,8 +356,8 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
             <div>Customer</div>
             <div style={{ textAlign: 'right' }}>Total Amount</div>
           </div>
-          
-          {sales.map((sale) => (
+
+          {sales.map((sale, index) => (
             <div
               key={sale._id}
               style={{
@@ -388,17 +388,27 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
               <div style={{ color: '#666' }}>
                 {(sale.items || []).length} item{(sale.items || []).length !== 1 ? 's' : ''}
               </div>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '6px',
-                color: getPaymentMethodColor(sale.paymentMethod || 'cash')
-              }}>
-                <span>{getPaymentMethodIcon(sale.paymentMethod || 'cash')}</span>
-                <span style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: '500' }}>
-                  {sale.paymentMethod || 'cash'}
-                </span>
-              </div>
+              {(() => {
+                const method = sale.paymentMethod || 'cash';
+                const pill = getPaymentPillStyle(method);
+                return (
+                  <div style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: 6,
+                    color: pill.color,
+                    background: pill.background,
+                    padding: '4px 10px',
+                    borderRadius: 999,
+                    justifySelf: 'center'
+                  }}>
+                    <span style={{ fontSize: 12 }}>{getPaymentMethodIcon(method)}</span>
+                    <span style={{ textTransform: 'uppercase', fontSize: 12, fontWeight: 600 }}>
+                      {method}
+                    </span>
+                  </div>
+                );
+              })()}
               <div style={{ color: '#666', fontSize: '13px' }}>
                 {sale.customerDetails?.name || 'Walk-in Customer'}
               </div>
