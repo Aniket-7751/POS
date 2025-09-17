@@ -151,9 +151,9 @@ const validateOrganizationSignup = (req, res, next) => {
   next();
 };
 
-// Store signup validation middleware
+// Store signup validation middleware (token-based)
 const validateStoreSignup = (req, res, next) => {
-  const { storeId, email, password } = req.body;
+  const { storeId, email, password, token } = req.body;
   const errors = [];
 
   // Store ID validation
@@ -163,10 +163,13 @@ const validateStoreSignup = (req, res, next) => {
     errors.push('Store ID must be a valid string');
   }
 
-  // Email validation
-  if (!email) {
-    errors.push('Email is required');
-  } else if (!validateEmail(email)) {
+  // Token required for signup completion
+  if (!token || typeof token !== 'string' || token.trim().length === 0) {
+    errors.push('Signup token is required');
+  }
+
+  // Email optional; if provided, must be valid
+  if (email && !validateEmail(email)) {
     errors.push('Please enter a valid email address');
   }
 

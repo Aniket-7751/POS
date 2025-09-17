@@ -2,33 +2,22 @@ const Sale = require('../models/Sale');
 const Product = require('../models/Product');
 const Catalogue = require('../models/Catalogue');
 const Store = require('../models/Store');
+const StorePrice = require('../models/StorePrice');
 const { parseISO, startOfDay, endOfDay, endOfToday } = require("date-fns");
 // const tz = require("date-fns-tz");
 
 // const  zonedTimeToUtc  = tz.zonedTimeToUtc;
 const { zonedTimeToUtc } = require('date-fns-tz');
 
-// Get all sales/transactions
+// Get all sales/transactions (optionally filter by storeId)
 exports.getAllSales = async (req, res) => {
   try {
-    const { storeId } = req.query;  // e.g., STORE0001 or a Mongo ObjectId
+    const { storeId } = req.query;
     const query = {};
-
     if (storeId) {
-      // Find store either by Mongo _id or by storeId string
-      const store = await Store.findOne({
-        $or: [{ _id: storeId }, { storeId: storeId }]
-      });
-
-      if (!store) {
-        return res.status(404).json({ error: "Store not found" });
-      }
-
-      // Use the actual Mongo _id for filtering Sales
-      query.storeId = store._id;
+      query.storeId = storeId;
     }
-
-    const sales = await Sale.find()
+    const sales = await Sale.find(query)
       .populate('storeId')
       .populate('cashier')
       .sort({ dateTime: -1 });
@@ -73,7 +62,24 @@ exports.createTransaction = async (req, res) => {
         throw new Error(`Insufficient stock for ${product.itemName}. Available: ${product.stock}`);
       }
 
-      const itemSubTotal = item.quantity * item.pricePerUnit;
+      // Determine effective price for store
+      const override = await StorePrice.findOne({ storeId, sku: item.sku, status: 'active' });
+      const basePrice = Number(product.price) || 0;
+      let effectivePrice = basePrice;
+      if (override) {
+        if (typeof override.overridePrice === 'number') {
+          effectivePrice = Number(override.overridePrice);
+        } else {
+          const margin = Number(override.marginValue) || 0;
+          effectivePrice = override.marginType === 'absolute' ? basePrice + margin : basePrice + (basePrice * margin / 100);
+        }
+      } else {
+        // Fallback: use store-wide profit margin percent if no per-SKU override
+        const storeMargin = Number(store.profitMarginPercent) || 0;
+        effectivePrice = basePrice + (basePrice * storeMargin / 100);
+      }
+
+      const itemSubTotal = Number(item.quantity) * effectivePrice;
       const itemDiscount = item.discount || 0;
       // Calculate GST for each product using store gstRate
       const itemGst = ((itemSubTotal - itemDiscount) * gstRate) / 100;
@@ -87,7 +93,7 @@ exports.createTransaction = async (req, res) => {
         sku: item.sku,
         itemName: product.itemName,
         quantity: item.quantity,
-        pricePerUnit: item.pricePerUnit,
+        pricePerUnit: effectivePrice,
         gst: itemGst,
         discount: itemDiscount,
         totalAmount: itemTotal
@@ -240,19 +246,17 @@ exports.getProductByBarcode = async (req, res) => {
   }
 };
 
-// Get sales by date range
+// Get sales by date range (optionally filter by storeId)
 exports.getSalesByDateRange = async (req, res) => {
   try {
-    const { start, end } = req.query;
+    const { start, end, storeId } = req.query;
     const startDate = new Date(start);
     const endDate = new Date(end);
-
-    const sales = await Sale.find({
-      dateTime: {
-        $gte: startDate,
-        $lte: endDate
-      }
-    })
+    const query = {
+      dateTime: { $gte: startDate, $lte: endDate }
+    };
+    if (storeId) query.storeId = storeId;
+    const sales = await Sale.find(query)
       .populate('storeId')
       .populate('cashier')
       .sort({ dateTime: -1 });
@@ -359,11 +363,14 @@ exports.getSalesStats = async (req, res) => {
 //   }
 // };
 
-// Get sales by payment method
+// Get sales by payment method (optionally filter by storeId)
 exports.getSalesByPaymentMethod = async (req, res) => {
   try {
     const { paymentMethod } = req.params;
-    const sales = await Sale.find({ paymentMethod })
+    const { storeId } = req.query;
+    const query = { paymentMethod };
+    if (storeId) query.storeId = storeId;
+    const sales = await Sale.find(query)
       .populate('storeId')
       .populate('cashier')
       .sort({ dateTime: -1 });
