@@ -84,7 +84,12 @@ export const storeAPI = {
 
 // Category API
 export const categoryAPI = {
-  getAll: () => api.get('/categories'),
+  getAll: (options?: { params?: any }) => {
+    if (options && options.params) {
+      return api.get('/categories', { params: options.params });
+    }
+    return api.get('/categories');
+  },
   getById: (id: string) => api.get(`/categories/${id}`),
   create: (data: any) => api.post('/categories', data),
   update: (id: string, data: any) => api.put(`/categories/${id}`, data),
@@ -93,7 +98,12 @@ export const categoryAPI = {
 
 // Catalogue API
 export const catalogueAPI = {
-  getAll: () => api.get('/catalogues'),
+  getAll: (options?: { params?: any }) => {
+    if (options && options.params) {
+      return api.get('/catalogues', { params: options.params });
+    }
+    return api.get('/catalogues');
+  },
   getById: (id: string) => api.get(`/catalogues/${id}`),
   create: (data: any) => api.post('/catalogues', data),
   update: (id: string, data: any) => api.put(`/catalogues/${id}`, data),
