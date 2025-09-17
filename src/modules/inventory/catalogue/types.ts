@@ -22,7 +22,7 @@ export interface Catalogue {
   stock: number;
   barcode?: string;
   status: 'active' | 'inactive';
-  image?: string;
+  images?: string[];
   thumbnail?: string;
   instructions?: string;
   expiry?: string;

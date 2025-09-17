@@ -22,7 +22,7 @@ const initialState: Catalogue = {
   stock: 0,
   barcode: '',
   status: 'active',
-  image: '',
+  images: [],
   thumbnail: '',
   instructions: '',
   expiry: '', // expiry as string
@@ -39,8 +39,9 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<Catalogue>(initialState);
   const [error, setError] = useState('');
-  const [image, setImage] = useState<File | null>(null);
-  const [thumbnail, setThumbnail] = useState<File | null>(null);
+  const [images, setImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [thumbnailIdx, setThumbnailIdx] = useState<number>(0);
   const [categories, setCategories] = useState<Category[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [volumeValue, setVolumeValue] = useState('');
@@ -68,6 +69,11 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
           setExpiryValue(expiryMatch[1]);
           setExpiryUnit(expiryMatch[2].toLowerCase() as 'hours' | 'days');
         }
+      }
+      // Set image previews from editData.images if present
+      if (editData.images && Array.isArray(editData.images)) {
+        setImagePreviews(editData.images);
+        setThumbnailIdx(editData.images.findIndex(img => img === editData.thumbnail) || 0);
       }
     }
   }, [editData]);
@@ -129,6 +135,7 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
     itemId: '',
     sku: '',
     categoryId: '',
+    itemName: '',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -142,6 +149,14 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
         newValue = value.replace(/[^a-zA-Z0-9]/g, '');
       }
       setFieldErrors(prev => ({ ...prev, [name]: errorMsg }));
+    }
+    if (name === 'itemName') {
+      // Only allow alphabets and hyphen
+      if (/[^a-zA-Z\-\s]/.test(value)) {
+        errorMsg = 'Only alphabets and - allowed';
+        newValue = value.replace(/[^a-zA-Z\-\s]/g, '');
+      }
+      setFieldErrors(prev => ({ ...prev, itemName: errorMsg }));
     }
 
     if (name === 'expiry') {
@@ -166,11 +181,14 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'thumbnail') => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      console.log(`File selected for ${type}:`, file.name, file.size, file.type);
-      if (type === 'image') setImage(file);
-      else setThumbnail(file);
+    if (type === 'image' && e.target.files) {
+      const files = Array.from(e.target.files);
+      setImages(files);
+      // Generate previews
+      Promise.all(files.map(file => fileToBase64(file))).then(previews => {
+        setImagePreviews(previews);
+      });
+      setThumbnailIdx(0); // Default to first image
     }
   };
 
@@ -183,16 +201,13 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
   };
 
   const validateStep1 = () => {
-    if (!form.sku || !form.itemName || !volumeValue || !volumeUnit || !form.categoryId || !form.organizationId) {
-      setError('Please fill all required fields (SKU, Item Name, Volume Value, Volume Unit, Category, Organization)');
+    if (!form.itemName || !volumeValue || !volumeUnit || !form.categoryId || !form.organizationId) {
+      setError('Please fill all required fields (Item Name, Volume Value, Volume Unit, Category, Organization)');
       return false;
     }
-    if (!/^[a-zA-Z0-9]+$/.test(form.itemId)) {
-      setFieldErrors(prev => ({ ...prev, itemId: 'Special characters not allowed' }));
-      return false;
-    }
-    if (!/^[a-zA-Z0-9]+$/.test(form.sku)) {
-      setFieldErrors(prev => ({ ...prev, sku: 'Special characters not allowed' }));
+    if (!/^[a-zA-Z\-\s]+$/.test(form.itemName)) {
+      setFieldErrors(prev => ({ ...prev, itemName: 'Only alphabets and - allowed' }));
+      setError('Item Name can only contain alphabets and -');
       return false;
     }
     if (!/^[a-zA-Z0-9]+$/.test(form.categoryId)) {
@@ -217,27 +232,26 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
     if (!validateStep2()) return;
 
     try {
-      console.log('Submitting catalogue with files:', { image: !!image, thumbnail: !!thumbnail });
-
-      // Prefer base64 payload so it works across machines without shared disk
       let payload: any = { ...form };
       // expiry is already a string in form state (e.g., '2 days' or '')
-      if (image) {
-        payload.image = await fileToBase64(image);
+      if (images.length > 0) {
+        // Compress and convert all images to base64
+        const base64Images = await Promise.all(images.map(file => fileToBase64(file)));
+        payload.images = base64Images;
+        payload.thumbnail = base64Images[thumbnailIdx] || base64Images[0];
+      } else if (imagePreviews.length > 0) {
+        payload.images = imagePreviews;
+        payload.thumbnail = imagePreviews[thumbnailIdx] || imagePreviews[0];
       }
-      if (thumbnail) {
-        payload.thumbnail = await fileToBase64(thumbnail);
-      }
-
       if (editId) {
         await updateCatalogue(editId, payload);
       } else {
         await createCatalogue(payload);
       }
-
       setForm(initialState);
-      setImage(null);
-      setThumbnail(null);
+      setImages([]);
+      setImagePreviews([]);
+      setThumbnailIdx(0);
       setVolumeValue('');
       setVolumeUnit('');
       setExpiryValue('');
@@ -252,34 +266,23 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
   return (
     <div style={{ padding: '32px 0', background: '#f8f9fb', minHeight: '100vh' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-        <div style={{ fontSize: 15, color: '#6c6c6c', marginBottom: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }} onClick={onBack}>
+        <h1 style={{ fontWeight: 700, fontSize: 32, marginBottom: 8 }}>{editId ? 'Edit Catalogue' : 'Add Catalogue'}</h1>
+        <div style={{ fontSize: 15, color: '#6c6c6c', marginBottom: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }} onClick={onBack}>
           <span style={{ fontSize: 20, fontWeight: 600 }}>{'←'}</span> Back to Catalogue
         </div>
-        <h1 style={{ fontWeight: 700, fontSize: 32, marginBottom: 8 }}>{editId ? 'Edit Catalogue' : 'Add Catalogue'}</h1>
-        <div style={{ color: '#6c6c6c', marginBottom: 32 }}>{editId ? 'Edit the catalogue details' : 'Add a new catalogue item to your inventory'}</div>
         <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 2px 12px #e6e6e6', padding: 40, maxWidth: 900, margin: '0 auto' }}>
           <form onSubmit={handleSubmit}>
             {step === 1 ? (
               <>
                 <div style={{ fontWeight: 700, fontSize: 22, marginBottom: 24 }}>Catalogue Information</div>
-                <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
-                  <div style={{ flex: 1 }}>
-                    <label>Item ID <span style={{ color: 'red' }}>*</span></label>
-                    <input name="itemId" value={form.itemId} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
-                    {fieldErrors.itemId && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.itemId}</div>}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label>SKU <span style={{ color: 'red' }}>*</span></label>
-                    <input name="sku" value={form.sku} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
-                    {fieldErrors.sku && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.sku}</div>}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
-                  <div style={{ flex: 1 }}>
+                {/* Item ID and SKU are autogenerated in backend, not shown in UI */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 24 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <label>Item Name <span style={{ color: 'red' }}>*</span></label>
                     <input name="itemName" value={form.itemName} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    {fieldErrors.itemName && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.itemName}</div>}
                   </div>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <label>Category <span style={{ color: 'red' }}>*</span></label>
                     <select name="categoryId" value={form.categoryId} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}>
                       <option value="">Select a category</option>
@@ -291,26 +294,14 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
                     </select>
                     {fieldErrors.categoryId && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.categoryId}</div>}
                   </div>
-                </div>
-                <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
-                  <div style={{ flex: 1 }}>
-                    <label>Volume of Measurement <span style={{ color: 'red' }}>*</span></label>
-                    <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                      <input 
-                        name="volumeValue" 
-                        value={volumeValue} 
-                        onChange={handleVolumeValueChange} 
-                        required 
-                        placeholder="Enter value" 
-                        style={{ flex: 1, padding: 10, borderRadius: 6, border: '1px solid #ccc' }} 
-                      />
-                      <select 
-                        name="volumeUnit" 
-                        value={volumeUnit} 
-                        onChange={handleVolumeUnitChange} 
-                        required 
-                        style={{ flex: 1, padding: 10, borderRadius: 6, border: '1px solid #ccc' }}
-                      >
+                  <div style={{ display: 'flex', flexDirection: 'row', gap: 12 }}>
+                    <div style={{ flex: 2, display: 'flex', flexDirection: 'column' }}>
+                      <label>Volume of Measurement <span style={{ color: 'red' }}>*</span></label>
+                      <input name="volumeValue" value={volumeValue} onChange={handleVolumeValueChange} required placeholder="Enter value" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    </div>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      <label>&nbsp;</label>
+                      <select name="volumeUnit" value={volumeUnit} onChange={handleVolumeUnitChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}>
                         <option value="">Select unit</option>
                         <option value="kg">kg</option>
                         <option value="gm">gm</option>
@@ -319,53 +310,34 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
                       </select>
                     </div>
                   </div>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <label>Source of Origin</label>
                     <input name="sourceOfOrigin" value={form.sourceOfOrigin} onChange={handleChange} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
                   </div>
-                </div>
-                <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <label>Price <span style={{ color: 'red' }}>*</span></label>
-                    <input 
-                      name="price" 
-                      type="number" 
-                      value={form.price || ''} 
-                      onChange={handleChange} 
-                      required 
-                      min="0"
-                      style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} 
-                    />
+                    <input name="price" type="number" value={form.price || ''} onChange={handleChange} required min="0" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
                   </div>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <label>Stock</label>
-                    <input 
-                      name="stock" 
-                      type="number" 
-                      value={form.stock || ''} 
-                      onChange={handleChange} 
-                      min="0"
-                      style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} 
-                    />
+                    <input name="stock" type="number" value={form.stock || ''} onChange={handleChange} min="0" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
                   </div>
-                </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label>Certification</label>
-                  <input name="certification" value={form.certification} onChange={handleChange} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
-                </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label>Instructions</label>
-                  <input name="instructions" value={form.instructions} onChange={handleChange} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
-                </div>
-                <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <label>Certification</label>
+                    <input name="certification" value={form.certification} onChange={handleChange} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <label>Instructions</label>
+                    <input name="instructions" value={form.instructions} onChange={handleChange} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <label>Status <span style={{ color: 'red' }}>*</span></label>
                     <select name="status" value={form.status} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}>
                       <option value="active">Active</option>
                       <option value="inactive">Inactive</option>
                     </select>
                   </div>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <label>Organization <span style={{ color: 'red' }}>*</span></label>
                     <select name="organizationId" value={form.organizationId || ''} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}>
                       <option value="">Select an organization</option>
@@ -376,65 +348,48 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
                       ))}
                     </select>
                   </div>
-                </div>
-                {/* Expiry input field */}
-                <div style={{ marginBottom: 16 }}>
-                  <label>Expiry</label>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <input
-                      name="expiry"
-                      type="number"
-                      value={expiryValue}
-                      onChange={handleChange}
-                      min="0"
-                      placeholder="Enter value"
-                      style={{ flex: 2, padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}
-                    />
-                    <select
-                      name="expiryUnit"
-                      value={expiryUnit}
-                      onChange={handleChange}
-                      style={{ flex: 1, padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}
-                    >
-                      <option value="hours">Hours</option>
-                      <option value="days">Days</option>
-                    </select>
+                  <div style={{ display: 'flex', flexDirection: 'row', gap: 12 }}>
+                    <div style={{ flex: 2, display: 'flex', flexDirection: 'column' }}>
+                      <label>Expiry</label>
+                      <input name="expiry" type="number" value={expiryValue} onChange={handleChange} min="0" placeholder="Enter value" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    </div>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      <label>&nbsp;</label>
+                      <select name="expiryUnit" value={expiryUnit} onChange={handleChange} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}>
+                        <option value="hours">Hours</option>
+                        <option value="days">Days</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
                 
                 {/* Nutrition Value Section */}
                 <div style={{ marginBottom: 16, padding: 16, backgroundColor: '#f8f9fa', borderRadius: 8, border: '1px solid #e9ecef' }}>
                   <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 12, color: '#495057' }}>Nutrition Information (per 100g)</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 26 }}>
-                    <div>
-                      <label>Calories</label>
-                      <input name="nutritionValue.calories" type="number" value={form.nutritionValue?.calories || ''} onChange={handleChange} placeholder="kcal" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label style={{ marginBottom: 4 }}>Calories</label>
+                      <input name="nutritionValue.calories" type="number" value={form.nutritionValue?.calories || ''} onChange={handleChange} placeholder="kcal" style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #ccc' }} />
                     </div>
-                    <div>
-                      <label>Protein (g)</label>
-                      <input name="nutritionValue.protein" type="number" value={form.nutritionValue?.protein || ''} onChange={handleChange} placeholder="grams" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label style={{ marginBottom: 4 }}>Protein (g)</label>
+                      <input name="nutritionValue.protein" type="number" value={form.nutritionValue?.protein || ''} onChange={handleChange} placeholder="grams" style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #ccc' }} />
                     </div>
-                    <div>
-                      <label>Fat (g)</label>
-                      <input name="nutritionValue.fat" type="number" value={form.nutritionValue?.fat || ''} onChange={handleChange} placeholder="grams" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label style={{ marginBottom: 4 }}>Fat (g)</label>
+                      <input name="nutritionValue.fat" type="number" value={form.nutritionValue?.fat || ''} onChange={handleChange} placeholder="grams" style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #ccc' }} />
                     </div>
-                  </div>
-                  <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 26 }}>
-                    <div>
-                      <label>Carbs (g)</label>
-                      <input name="nutritionValue.carbs" type="number" value={form.nutritionValue?.carbs || ''} onChange={handleChange} placeholder="grams" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label style={{ marginBottom: 4 }}>Carbs (g)</label>
+                      <input name="nutritionValue.carbs" type="number" value={form.nutritionValue?.carbs || ''} onChange={handleChange} placeholder="grams" style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #ccc' }} />
                     </div>
-                    <div>
-                      <label>Fiber (g)</label>
-                      <input name="nutritionValue.fiber" type="number" value={form.nutritionValue?.fiber || ''} onChange={handleChange} placeholder="grams" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label style={{ marginBottom: 4 }}>Sugar (g)</label>
+                      <input name="nutritionValue.sugar" type="number" value={form.nutritionValue?.sugar || ''} onChange={handleChange} placeholder="grams" style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #ccc' }} />
                     </div>
-                    <div>
-                      <label>Sugar (g)</label>
-                      <input name="nutritionValue.sugar" type="number" value={form.nutritionValue?.sugar || ''} onChange={handleChange} placeholder="grams" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
-                    </div>
-                    <div>
-                      <label>Sodium (mg)</label>
-                      <input name="nutritionValue.sodium" type="number" value={form.nutritionValue?.sodium || ''} onChange={handleChange} placeholder="milligrams" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label style={{ marginBottom: 4 }}>Sodium (mg)</label>
+                      <input name="nutritionValue.sodium" type="number" value={form.nutritionValue?.sodium || ''} onChange={handleChange} placeholder="milligrams" style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #ccc' }} />
                     </div>
                   </div>
                 </div>
@@ -446,14 +401,19 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
               </>
             ) : (
               <>
-                <div style={{ fontWeight: 600, fontSize: 20, marginBottom: 16 }}>Product Information</div>
+                <div style={{ fontWeight: 600, fontSize: 20, marginBottom: 16 }}>Product Images</div>
                 <div style={{ marginBottom: 16 }}>
-                  <label>Upload Image</label>
-                  <input type="file" accept="image/*" onChange={e => handleFileChange(e, 'image')} style={{ display: 'block', marginTop: 4 }} />
-                </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label>Upload Thumbnail Image</label>
-                  <input type="file" accept="image/*" onChange={e => handleFileChange(e, 'thumbnail')} style={{ display: 'block', marginTop: 4 }} />
+                  <label>Upload Images (multiple allowed, max 5)</label>
+                  <input type="file" accept="image/*" multiple onChange={e => handleFileChange(e, 'image')} style={{ display: 'block', marginTop: 4 }} />
+                  <div style={{ display: 'flex', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
+                    {imagePreviews.map((img, idx) => (
+                      <div key={idx} style={{ position: 'relative', display: 'inline-block' }}>
+                        <img src={img} alt={`Preview ${idx + 1}`} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8, border: idx === thumbnailIdx ? '2px solid #6c3fc5' : '1px solid #ccc' }} />
+                        <button type="button" onClick={() => setThumbnailIdx(idx)} style={{ position: 'absolute', top: 4, right: 4, background: idx === thumbnailIdx ? '#6c3fc5' : '#fff', color: idx === thumbnailIdx ? '#fff' : '#6c3fc5', border: '1px solid #6c3fc5', borderRadius: '50%', width: 24, height: 24, cursor: 'pointer', fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Set as thumbnail">{idx === thumbnailIdx ? '✓' : '○'}</button>
+                      </div>
+                    ))}
+                  </div>
+                  {imagePreviews.length > 0 && <div style={{ marginTop: 8, fontSize: 13, color: '#6c3fc5' }}>Select one image as thumbnail</div>}
                 </div>
                 {/* Barcode Generation Section */}
                 <div style={{ marginBottom: 16, padding: 16, backgroundColor: '#f8f9fa', borderRadius: 8, border: '1px solid #e9ecef' }}>
