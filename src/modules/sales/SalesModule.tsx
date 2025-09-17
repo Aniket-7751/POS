@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import salesAPI, { Sale } from './salesApi';
+import storeAPI, { Store } from '../store/storeApi';
 
 interface SalesModuleProps {
   storeId?: string;
@@ -13,6 +14,7 @@ const getStoreIdFromStorage = (): string | undefined => {
 
 const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
   const [sales, setSales] = useState<Sale[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [resolvedStoreId, setResolvedStoreId] = useState<string | undefined>(
@@ -22,6 +24,20 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedDay, setSelectedDay] = useState('');
+
+  //const [selectedStore, setSelectedStore] = useState<string | undefined>(storeId || getStoreIdFromStorage());
+  // ✅ Fetch stores once
+  useEffect(() => {
+    const fetchStores = async () => {
+      try {
+        const response = await storeAPI.getAll();
+        setStores(response.data || []);
+      } catch (err) {
+        console.error('Error fetching stores:', err);
+      }
+    };
+    fetchStores();
+  }, []);
 
   // ✅ Ensure storeId is available (from props or localStorage or API)
   useEffect(() => {
@@ -56,16 +72,16 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
 
       switch (filter) {
         case 'today':
-          response = await salesAPI.getTodaysSales(storeId);
+          response = await salesAPI.getTodaysSales(resolvedStoreId);
           break;
         case 'cash':
         case 'card':
         case 'UPI':
-          response = await salesAPI.getByPaymentMethod(filter, storeId);
+          response = await salesAPI.getByPaymentMethod(filter, resolvedStoreId);
           break;
         case 'date':
           if (selectedDate) {
-            response = await salesAPI.getByDate(selectedDate, storeId);
+            response = await salesAPI.getByDate(selectedDate, resolvedStoreId);
           } else {
             setSales([]);
             setError('Please select a date');
@@ -75,7 +91,7 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
           break;
         case 'day':
           if (selectedDay) {
-            response = await salesAPI.getByDay(selectedDay, storeId);
+            response = await salesAPI.getByDay(selectedDay, resolvedStoreId);
           } else {
             setSales([]);
             setError('Please select a day');
@@ -84,7 +100,7 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
           }
           break;
         default:
-          response = await salesAPI.getAll(storeId);
+          response = await salesAPI.getAll(resolvedStoreId);
       }
       const salesData = Array.isArray(response.data) ? response.data.map((sale: Sale) => ({
         ...sale,
@@ -107,9 +123,14 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
     }
   };
 
+  // 🔑 Re-fetch whenever filter, resolvedStoreId, date/day changes
   useEffect(() => {
     fetchSales();
-  }, [filter, storeId, selectedDate, selectedDay]);
+  }, [filter, resolvedStoreId, selectedDate, selectedDay]);
+
+  // useEffect(() => {
+  //   fetchSales();
+  // }, [filter, storeId, selectedDate, selectedDay]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -229,6 +250,33 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
           gap: 12,
           alignItems: 'center'
         }}>
+
+          {/* Store Selector */}
+          <select
+            value={resolvedStoreId || ''}
+            onChange={(e) => {
+              const selected = e.target.value || undefined;
+              setResolvedStoreId(selected);
+              if (selected) localStorage.setItem('storeId', selected);
+            }}
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              background: 'white',
+              fontSize: '14px',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="">Select Store</option>
+            {stores.map((store) => (
+              <option key={store._id} value={store.storeId}>
+                {store.storeName}
+              </option>
+            ))}
+          </select>
+
+          {/* Existing Filter Dropdown */}
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value as any)}

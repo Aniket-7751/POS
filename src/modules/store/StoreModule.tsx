@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { getStores, updateStore, deleteStore } from './storeApi';
+//import { getStores, updateStore, deleteStore } from './storeApi';
+import storeAPI from './storeApi';   // ✅ import the object
 import { Store } from './types';
 import AddStorePage from './AddStorePage';
 
@@ -10,7 +11,8 @@ const StoreModule: React.FC = () => {
   const [showAdd, setShowAdd] = useState(false);
 
   const fetchStores = async () => {
-    const res = await getStores();
+    //const res = await getStores();
+    const res = await storeAPI.getAll(); // ✅ use methods from storeAPI
   setStores(res.data as Store[]);
   };
 
@@ -25,7 +27,8 @@ const StoreModule: React.FC = () => {
 
 
   const handleDelete = async (id: string) => {
-    await deleteStore(id);
+    //await deleteStore(id);
+    await storeAPI.delete(id);
     fetchStores();
   };
 

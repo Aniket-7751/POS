@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { createStore, updateStore } from './storeApi';
+//import { createStore, updateStore } from './storeApi';
+import storeApi from './storeApi';
 import { getOrganizations } from '../organization/organizationApi';
 import { compressImage } from '../../utils/imageCompression';
 import { Store } from './types';
@@ -146,9 +147,9 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
     e.preventDefault();
     if (!validate()) return;
     if (editId) {
-      await updateStore(editId, form);
+      await storeApi.update(editId, form);
     } else {
-      await createStore(form);
+      await storeApi.create(form);
     }
     setForm(initialState);
     setStorePicture(null);
