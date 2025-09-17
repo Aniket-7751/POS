@@ -550,8 +550,9 @@ function App() {
         </div>
 
         {/* User / Logout - Fixed at Bottom */}
-        <div style={{ 
-          padding: '20px',
+
+        <div style={{
+          padding: '10px',
           borderTop: '1px solid #333',
           background: '#1a1a1a'
         }}>
@@ -561,52 +562,52 @@ function App() {
                 onClick={handleLogout}
                 title="Logout"
                 style={{
-                  width: 40,
-                  height: 40,
+                  width: 32,
+                  height: 32,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   background: 'transparent',
                   color: '#ccc',
                   border: '1px solid #333',
-                  borderRadius: '8px',
+                  borderRadius: '6px',
                   cursor: 'pointer'
                 }}
               >
-                <FiLogOut size={18} />
+                <FiLogOut size={15} />
               </button>
             </div>
           ) : (
             <>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '12px',
-                marginBottom: '12px'
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '8px'
               }}>
-                <div style={{ 
-                  width: '40px', 
-                  height: '40px', 
-                  background: 'linear-gradient(45deg, #e53e3e, #38a169)', 
-                  borderRadius: '50%', 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                <div style={{
+                  width: '28px',
+                  height: '28px',
+                  background: 'linear-gradient(45deg, #e53e3e, #38a169)',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '16px'
+                  fontSize: '13px'
                 }}>
                   {user.name.charAt(0).toUpperCase()}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ 
-                    fontSize: '14px', 
-                    fontWeight: '600', 
+                  <div style={{
+                    fontSize: '12px',
+                    fontWeight: '600',
                     color: '#fff',
-                    marginBottom: '2px'
+                    marginBottom: '1px'
                   }}>
                     {user.name}
                   </div>
-                  <div style={{ 
-                    fontSize: '11px', 
+                  <div style={{
+                    fontSize: '9px',
                     color: '#888',
                     textTransform: 'uppercase',
                     letterSpacing: '0.5px'
@@ -617,14 +618,15 @@ function App() {
                 <button
                   onClick={handleLogout}
                   style={{
-                    padding: '8px',
+                    padding: '5px 10px',
                     background: 'transparent',
                     color: '#888',
                     border: '1px solid #333',
-                    borderRadius: '6px',
+                    borderRadius: '5px',
                     cursor: 'pointer',
-                    fontSize: '12px',
-                    transition: 'all 0.2s ease'
+                    fontSize: '11px',
+                    transition: 'all 0.2s ease',
+                    minWidth: '48px'
                   }}
                   onMouseOver={(e) => {
                     const target = e.target as HTMLButtonElement;
@@ -643,12 +645,12 @@ function App() {
                 </button>
               </div>
               {(user.organization || user.store) && (
-                <div style={{ 
-                  fontSize: '12px', 
+                <div style={{
+                  fontSize: '10px',
                   color: '#666',
-                  paddingLeft: '52px'
+                  paddingLeft: '36px'
                 }}>
-                  {user.organization ? user.organization.organizationName : user.store?.storeName}
+                  {user.userType === 'store' ? (user.store?.storeName || '') : (user.organization?.organizationName || '')}
                 </div>
               )}
             </>
