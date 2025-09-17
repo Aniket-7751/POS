@@ -461,10 +461,12 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
                     accept="image/*"
                     multiple
                     onChange={async (e) => {
-                      if (!e.target.files) return;
-                      await handleFilesSelected(e.target.files);
+                      const inputEl = e.currentTarget as HTMLInputElement;
+                      const files = inputEl.files;
+                      if (!files) return;
+                      await handleFilesSelected(files);
                       // reset input so same files can be reselected if needed
-                      e.currentTarget.value = '';
+                      inputEl.value = '';
                     }}
                     style={{ display: 'block', marginTop: 4 }}
                   />
