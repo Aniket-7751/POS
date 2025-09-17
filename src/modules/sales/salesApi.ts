@@ -29,10 +29,10 @@ const getAll = (storeId?: string) =>
   api.get('/sales', { params: { storeId } });
 
 const getTodaysSales = (storeId?: string) =>
-  api.get(`/sales/store/${storeId}`, { params: { filter: 'today' } });
+  storeId ? api.get(`/sales/store/${storeId}`, { params: { filter: 'today' } }) : api.get('/sales/today');
 
 const getByPaymentMethod = (method: string, storeId?: string) =>
-  api.get('/sales/payment-method', { params: { method, storeId } });
+  api.get(`/sales/payment-method/${encodeURIComponent(method)}`, { params: { storeId } });
 
 const getByDate = (date: string, storeId?: string) =>
   api.get('/sales/by-date', { params: { date, storeId } });

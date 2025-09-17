@@ -89,8 +89,8 @@ const StoreDashboard: React.FC<StoreDashboardProps> = ({ storeId }) => {
         </div>
       </div>
 
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16, marginBottom: 16 }}>
+      {/* Stats (responsive) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, marginBottom: 16, alignItems: 'stretch' }}>
         <div style={{
           background: 'linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%)',
           border: '1px solid #f472b6',
@@ -98,7 +98,7 @@ const StoreDashboard: React.FC<StoreDashboardProps> = ({ storeId }) => {
           padding: 16,
           boxShadow: '0 6px 16px rgba(244, 114, 182, 0.16)'
         }}>
-          <div style={{ color: '#be185d', fontSize: 12, fontWeight: 700, marginBottom: 6 }}>💖 Today Sales</div>
+          <div style={{ color: '#be185d', fontSize: 12, fontWeight: 700, marginBottom: 6 }}>⚡ Today Sales</div>
           <div style={{ fontSize: 24, fontWeight: 900, color: '#831843' }}>{formatCurrency(stats.todaySales)}</div>
         </div>
         <div style={{
