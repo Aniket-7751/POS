@@ -7,15 +7,11 @@ const Organization = require('../models/Organization');
 exports.generateInvoice = async (req, res) => {
   try {
     const { transactionId } = req.body;
-    // Debug log for incoming request
-    console.log('DEBUG: generateInvoice called with transactionId:', transactionId);
-    // Get transaction details
     const transaction = await Sale.findById(transactionId).populate('storeId');
     if (!transaction) {
       return res.status(404).json({ error: 'Transaction not found' });
     }
 
-    // Get store and organization details
     const store = await Store.findById(transaction.storeId);
     if (!store) {
       return res.status(404).json({ error: 'Store not found' });
@@ -26,34 +22,36 @@ exports.generateInvoice = async (req, res) => {
       return res.status(404).json({ error: 'Organization not found' });
     }
 
-    // Debug log for store GST rate
-    console.log('DEBUG: Store GST Rate:', store.gstRate, 'Store ID:', store._id);
-
-    // Generate invoice number
     const invoiceNo = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
 
-    // Always use GST rate from the store
-    const gstRate = store.gstRate || 0;
+    const gstRate = Number(store.gstRate) || 0;
     let gstTotal = 0;
-    const recalculatedItems = transaction.items.map(item => {
-      const itemSubTotal = item.quantity * item.pricePerUnit;
-      const itemDiscount = item.discount || 0;
-      // Calculate GST for each product using store gstRate
+    const recalculatedItems = transaction.items.map((item) => {
+      const quantity = Number(item.quantity) || 0;
+      const price = Number(item.pricePerUnit) || 0;
+      const itemSubTotal = quantity * price;
+      const itemDiscount = Number(item.discount) || 0;
       const itemGst = ((itemSubTotal - itemDiscount) * gstRate) / 100;
       gstTotal += itemGst;
       const itemTotal = itemSubTotal - itemDiscount + itemGst;
-      // Debug log for GST calculation per item
-      console.log('DEBUG: Invoice Item:', item.sku, 'SubTotal:', itemSubTotal, 'Discount:', itemDiscount, 'GST:', itemGst, 'Total:', itemTotal);
       return {
-        ...item,
+        sku: item.sku,
+        itemName: item.itemName,
+        quantity,
+        pricePerUnit: price,
         gst: itemGst,
+        discount: itemDiscount,
         totalAmount: itemTotal
       };
     });
 
     const subTotal = recalculatedItems.reduce((sum, item) => sum + (item.quantity * item.pricePerUnit), 0);
-    const discountTotal = recalculatedItems.reduce((sum, item) => sum + item.discount, 0);
+    const discountTotal = recalculatedItems.reduce((sum, item) => sum + (Number(item.discount) || 0), 0);
     const grandTotal = subTotal - discountTotal + gstTotal;
+
+    if (!isFinite(grandTotal)) {
+      return res.status(400).json({ error: 'Invoice validation failed: totalAmount is invalid' });
+    }
 
     const invoiceData = {
       invoiceNo,
@@ -79,106 +77,13 @@ exports.generateInvoice = async (req, res) => {
     const invoice = new Invoice(invoiceData);
     await invoice.save();
 
-    res.status(201).json({
+    return res.status(201).json({
       message: 'Invoice generated successfully',
       invoiceNo,
       invoice
     });
   } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-  try {
-    const { transactionId } = req.body;
-    
-    // Get transaction details
-    const transaction = await Sale.findById(transactionId).populate('storeId');
-    if (!transaction) {
-      return res.status(404).json({ error: 'Transaction not found' });
-    }
-
-    // Get store and organization details
-    const store = await Store.findById(transaction.storeId);
-    if (!store) {
-      return res.status(404).json({ error: 'Store not found' });
-    }
-    
-    const organization = await Organization.findById(store.organizationId);
-    if (!organization) {
-      return res.status(404).json({ error: 'Organization not found' });
-    }
-
-    // console.log('Store data:', {
-    //   storeName: store.storeName,
-    //   storeAddress: store.storeAddress,
-    //   organizationId: store.organizationId
-    // });
-
-    // console.log('Organization data:', {
-    //   organizationName: organization.organizationName,
-    //   gstNumber: organization.gstNumber,
-    //   contactNumber: organization.contactNumber
-    // });
-
-    // Generate invoice number
-    const invoiceNo = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
-
-    // Always use GST rate from the store
-    const gstRate = store.gstRate || 0;
-    let gstTotal = 0;
-    const recalculatedItems = transaction.items.map(item => {
-      const itemSubTotal = item.quantity * item.pricePerUnit;
-      const itemDiscount = item.discount || 0;
-      // Calculate GST for each product using store gstRate
-      const itemGst = ((itemSubTotal - itemDiscount) * gstRate) / 100;
-      gstTotal += itemGst;
-      return {
-        ...item,
-        gst: itemGst,
-        totalAmount: itemSubTotal - itemDiscount + itemGst
-      };
-    });
-
-    const subTotal = recalculatedItems.reduce((sum, item) => sum + (item.quantity * item.pricePerUnit), 0);
-    const discountTotal = recalculatedItems.reduce((sum, item) => sum + item.discount, 0);
-    const grandTotal = subTotal - discountTotal + gstTotal;
-
-    const invoiceData = {
-      invoiceNo,
-      transactionId: transaction._id,
-      storeId: transaction.storeId,
-      organizationId: store.organizationId,
-      items: recalculatedItems,
-      totalAmount: grandTotal,
-      gstTotal,
-      paymentMode: transaction.paymentMethod,
-      qrCodeUrl: transaction.paymentMethod === 'UPI' ? generateUPIQR(organization, grandTotal) : null,
-      dateTime: transaction.dateTime,
-      customerDetails: transaction.customerDetails,
-      status: 'paid',
-      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      storeName: store.storeName,
-      storeAddress: store.storeAddress,
-      organizationName: organization.organizationName,
-      gstNumber: organization.gstNumber,
-      phoneNumber: organization.contactNumber
-    };
-
-    const invoice = new Invoice(invoiceData);
-    await invoice.save();
-
-    // console.log('Invoice data being sent:', {
-    //   storeName: invoiceData.storeName,
-    //   storeAddress: invoiceData.storeAddress,
-    //   organizationName: invoiceData.organizationName
-    // });
-
-    res.status(201).json({
-      message: 'Invoice generated successfully',
-      invoiceNo,
-      invoice
-    });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+    return res.status(400).json({ error: err.message });
   }
 };
 

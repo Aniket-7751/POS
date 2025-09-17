@@ -13,7 +13,10 @@ const storeSchema = new mongoose.Schema({
   storePicture: { type: String }, // URL or path to store picture
   status: { type: String, enum: ['active', 'inactive'], default: 'active' },
   organizationId: { type: String, ref: 'Organization', required: true },
-  gstRate: { type: Number, required: true, default: 18 }, // Fixed GST rate in percent
+  gstRate: { type: Number, required: true, default: 18 }, // GST rate in percent
+  discountRate: { type: Number, default: 0 }, // Optional store-wide discount (%)
+  profitMarginPercent: { type: Number, default: 0 }, // Store-wide profit margin (%) added on base price
+  theme: { type: String, enum: ['light', 'dark'], default: 'light' }, // Simple theme selection
 }, { timestamps: true, _id: false });
 
 module.exports = mongoose.model('Store', storeSchema);
