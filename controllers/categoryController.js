@@ -40,7 +40,18 @@ exports.createCategory = async (req, res) => {
 
 exports.getAllCategories = async (req, res) => {
   try {
-    const categories = await Category.find();
+    let query = {};
+    if (req.query.search) {
+      const search = req.query.search.trim();
+      // Search by SKU id or Item Name (case-insensitive)
+      query = {
+        $or: [
+          { categoryId: { $regex: search, $options: 'i' } },
+          { categoryName: { $regex: search, $options: 'i' } }
+        ]
+      };
+    }
+    const categories = await Category.find(query);
     res.json(categories);
   } catch (err) {
     res.status(500).json({ error: err.message });

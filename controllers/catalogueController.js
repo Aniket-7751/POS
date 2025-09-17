@@ -70,7 +70,18 @@ exports.createCatalogue = async (req, res) => {
 
 exports.getAllCatalogues = async (req, res) => {
   try {
-    const catalogues = await Catalogue.find();
+    let query = {};
+    if (req.query.search) {
+      const search = req.query.search.trim();
+      // Search by SKU id or Item Name (case-insensitive)
+      query = {
+        $or: [
+          { sku: { $regex: search, $options: 'i' } },
+          { itemName: { $regex: search, $options: 'i' } }
+        ]
+      };
+    }
+    const catalogues = await Catalogue.find(query);
     console.log('Retrieved catalogues:', catalogues.length, 'items');
     catalogues.forEach(cat => {
       console.log(`- ${cat.itemName}: image=${cat.image}, thumbnail=${cat.thumbnail}`);

@@ -9,10 +9,15 @@ const { parseISO, startOfDay, endOfDay, endOfToday } = require("date-fns");
 // const  zonedTimeToUtc  = tz.zonedTimeToUtc;
 const { zonedTimeToUtc } = require('date-fns-tz');
 
-// Get all sales/transactions
+// Get all sales/transactions (optionally filter by storeId)
 exports.getAllSales = async (req, res) => {
   try {
-    const sales = await Sale.find()
+    const { storeId } = req.query;
+    const query = {};
+    if (storeId) {
+      query.storeId = storeId;
+    }
+    const sales = await Sale.find(query)
       .populate('storeId')
       .populate('cashier')
       .sort({ dateTime: -1 });
@@ -241,19 +246,17 @@ exports.getProductByBarcode = async (req, res) => {
   }
 };
 
-// Get sales by date range
+// Get sales by date range (optionally filter by storeId)
 exports.getSalesByDateRange = async (req, res) => {
   try {
-    const { start, end } = req.query;
+    const { start, end, storeId } = req.query;
     const startDate = new Date(start);
     const endDate = new Date(end);
-
-    const sales = await Sale.find({
-      dateTime: {
-        $gte: startDate,
-        $lte: endDate
-      }
-    })
+    const query = {
+      dateTime: { $gte: startDate, $lte: endDate }
+    };
+    if (storeId) query.storeId = storeId;
+    const sales = await Sale.find(query)
       .populate('storeId')
       .populate('cashier')
       .sort({ dateTime: -1 });
@@ -360,11 +363,14 @@ exports.getSalesStats = async (req, res) => {
 //   }
 // };
 
-// Get sales by payment method
+// Get sales by payment method (optionally filter by storeId)
 exports.getSalesByPaymentMethod = async (req, res) => {
   try {
     const { paymentMethod } = req.params;
-    const sales = await Sale.find({ paymentMethod })
+    const { storeId } = req.query;
+    const query = { paymentMethod };
+    if (storeId) query.storeId = storeId;
+    const sales = await Sale.find(query)
       .populate('storeId')
       .populate('cashier')
       .sort({ dateTime: -1 });
