@@ -1,6 +1,11 @@
 import { categoryAPI } from '../../../api';
 
-export const getCategories = () => categoryAPI.getAll();
+export const getCategories = (params?: { search?: string }) => {
+	if (params && params.search) {
+		return categoryAPI.getAll({ params: { search: params.search } });
+	}
+	return categoryAPI.getAll();
+};
 export const getCategoryById = (id: string) => categoryAPI.getById(id);
 export const createCategory = (data: any) => categoryAPI.create(data);
 export const updateCategory = (id: string, data: any) => categoryAPI.update(id, data);

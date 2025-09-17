@@ -17,7 +17,6 @@ const initialState: Store = {
   storePicture: '',
   status: 'active',
   organizationId: '',
-  gstRate: 18,
 };
 
 interface AddStorePageProps {
@@ -87,12 +86,14 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
 
 
     if (name === 'contactPersonName') {
+      // Only allow alphabets and spaces
       if (/[^a-zA-Z\s]/.test(value)) {
         errorMsg = 'Only alphabets allowed';
         newValue = value.replace(/[^a-zA-Z\s]/g, '');
       }
     }
     if (name === 'contactNumber') {
+      // Only allow digits, max 10
       if (/[^0-9]/.test(value)) {
         errorMsg = 'Only integers allowed';
         newValue = value.replace(/[^0-9]/g, '');
@@ -100,6 +101,7 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
       newValue = newValue.slice(0, 10);
     }
     if (name === 'email') {
+      // Only allow lowercase, @ - _ + .
       if (/[^a-z0-9@\-_.+]/.test(value) || /[A-Z]/.test(value)) {
         errorMsg = 'Only lowercase letters, numbers, and @ - _ + . allowed';
         newValue = value.replace(/[^a-z0-9@\-_.+]/g, '').replace(/[A-Z]/g, '');
