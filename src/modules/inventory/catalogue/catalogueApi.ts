@@ -1,7 +1,12 @@
 import { catalogueAPI } from '../../../api';
 import { compressImage } from '../../../utils/imageCompression';
 
-export const getCatalogues = () => catalogueAPI.getAll();
+export const getCatalogues = (params?: { search?: string }) => {
+  if (params && params.search) {
+    return catalogueAPI.getAll({ params: { search: params.search } });
+  }
+  return catalogueAPI.getAll();
+};
 export const getCatalogueById = (id: string) => catalogueAPI.getById(id);
 export const createCatalogue = (data: any) => catalogueAPI.create(data);
 export const updateCatalogue = (id: string, data: any) => catalogueAPI.update(id, data);
