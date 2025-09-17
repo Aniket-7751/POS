@@ -11,6 +11,23 @@ const { zonedTimeToUtc } = require('date-fns-tz');
 // Get all sales/transactions
 exports.getAllSales = async (req, res) => {
   try {
+    const { storeId } = req.query;  // e.g., STORE0001 or a Mongo ObjectId
+    const query = {};
+
+    if (storeId) {
+      // Find store either by Mongo _id or by storeId string
+      const store = await Store.findOne({
+        $or: [{ _id: storeId }, { storeId: storeId }]
+      });
+
+      if (!store) {
+        return res.status(404).json({ error: "Store not found" });
+      }
+
+      // Use the actual Mongo _id for filtering Sales
+      query.storeId = store._id;
+    }
+
     const sales = await Sale.find()
       .populate('storeId')
       .populate('cashier')
