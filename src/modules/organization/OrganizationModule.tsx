@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
-import { getOrganizations, updateOrganization, deleteOrganization } from './organizationApi';
+import { FaEdit } from 'react-icons/fa';
+import { getOrganizations, updateOrganization } from './organizationApi';
 import { Organization } from './types';
 import AddOrganizationPage from './AddOrganizationPage';
 
@@ -10,7 +11,7 @@ const OrganizationModule: React.FC = () => {
   const [editData, setEditData] = useState<Organization | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  
 
   const fetchOrganizations = async () => {
     setLoading(true);
@@ -33,20 +34,7 @@ const OrganizationModule: React.FC = () => {
     setEditingId(org._id!);
   };
 
-  const handleDelete = async (id: string) => {
-    setDeletingId(id);
-    try {
-      await deleteOrganization(id);
-      // Optimistic update - remove from UI immediately
-      setOrganizations(prev => prev.filter(org => org._id !== id));
-    } catch (error) {
-      console.error('Failed to delete organization:', error);
-      // Refresh data if delete failed
-      fetchOrganizations();
-    } finally {
-      setDeletingId(null);
-    }
-  };
+  // No status toggle for Organization (no status field)
 
   const handleEmailClick = (email: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -90,7 +78,7 @@ const OrganizationModule: React.FC = () => {
                 <th style={{ padding: 16, textAlign: 'left' }}>Phone</th>
                 <th style={{ padding: 16, textAlign: 'left' }}>Email</th>
                 <th style={{ padding: 16, textAlign: 'left' }}>GST Number</th>
-                <th style={{ padding: 16, textAlign: 'left', borderTopRightRadius: 8 }}>Actions</th>
+                <th style={{ padding: 16, textAlign: 'right', borderTopRightRadius: 8, width: 120 }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -143,43 +131,9 @@ const OrganizationModule: React.FC = () => {
                       <a href={`mailto:${org.email}`} onClick={e => handleEmailClick(org.email, e)} style={{ color: '#2563eb', textDecoration: 'none' }}>{org.email}</a>
                     </td>
                     <td style={{ padding: 14 }}>{org.gstNumber}</td>
-                    <td style={{ padding: 14, textAlign: 'right' }}>
-                      <button
-                        onClick={() => handleEdit(org)}
-                        title="Edit"
-                        disabled={deletingId === org._id}
-                        style={{ 
-                          background: '#f3f4f6', 
-                          border: '1px solid #e5e7eb', 
-                          width: 32, 
-                          height: 32, 
-                          borderRadius: 6, 
-                          cursor: deletingId === org._id ? 'not-allowed' : 'pointer', 
-                          marginRight: 8,
-                          opacity: deletingId === org._id ? 0.5 : 1
-                        }}
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        onClick={() => handleDelete(org._id!)}
-                        title="Delete"
-                        disabled={deletingId === org._id}
-                        style={{ 
-                          background: deletingId === org._id ? '#f9fafb' : '#fef2f2', 
-                          border: deletingId === org._id ? '1px solid #e5e7eb' : '1px solid #fee2e2', 
-                          width: 32, 
-                          height: 32, 
-                          borderRadius: 6, 
-                          cursor: deletingId === org._id ? 'not-allowed' : 'pointer',
-                          opacity: deletingId === org._id ? 0.5 : 1
-                        }}
-                      >
-                        {deletingId === org._id ? (
-                          <div style={{ width: 12, height: 12, border: '2px solid #e5e7eb', borderTop: '2px solid #ef4444', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                        ) : (
-                          '🗑️'
-                        )}
+                    <td style={{ padding: 14, textAlign: 'right', width: 120 }}>
+                      <button onClick={() => handleEdit(org)} title="Edit" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#2980b9' }}>
+                        <FaEdit size={22} />
                       </button>
                     </td>
                   </tr>
