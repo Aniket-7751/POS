@@ -23,6 +23,7 @@ const initialState: Catalogue = {
   barcode: '',
   status: 'active',
   image: '',
+  images: [],
   thumbnail: '',
   instructions: '',
   expiry: '', // expiry as string
@@ -39,8 +40,12 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<Catalogue>(initialState);
   const [error, setError] = useState('');
-  const [image, setImage] = useState<File | null>(null);
-  const [thumbnail, setThumbnail] = useState<File | null>(null);
+  // Existing image URLs/base64 (from server)
+  const [existingImages, setExistingImages] = useState<string[]>([]);
+  // Newly added images (files) and their base64 versions
+  const [newImages, setNewImages] = useState<File[]>([]);
+  const [newImagesBase64, setNewImagesBase64] = useState<string[]>([]);
+  const [thumbnail, setThumbnail] = useState<string>('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [volumeValue, setVolumeValue] = useState('');
@@ -53,6 +58,17 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
   useEffect(() => {
     if (editData) {
       setForm(editData);
+      // Initialize existing images (prefer images[], fallback to legacy image)
+      const serverImages = Array.isArray(editData.images) && editData.images.length > 0
+        ? editData.images
+        : (editData.image ? [editData.image] : []);
+      setExistingImages(serverImages);
+      // Initialize thumbnail
+      if (editData.thumbnail) {
+        setThumbnail(editData.thumbnail);
+      } else if (serverImages.length > 0) {
+        setThumbnail(serverImages[0]);
+      }
       // Parse existing volume of measurement
       if (editData.volumeOfMeasurement) {
         const volumeMatch = editData.volumeOfMeasurement.match(/^(\d+(?:\.\d+)?)\s*(kg|gm|g|piece|pieces|ml|l)$/i);
@@ -165,13 +181,45 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'thumbnail') => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      console.log(`File selected for ${type}:`, file.name, file.size, file.type);
-      if (type === 'image') setImage(file);
-      else setThumbnail(file);
+  // removed legacy handleFileChange (single image/thumbnail)
+
+  const handleFilesSelected = async (fileList: FileList) => {
+    const files = Array.from(fileList);
+    if (files.length === 0) return;
+    setNewImages(prev => [...prev, ...files]);
+    // Precompute base64 for selection/payload
+    const base64Arr: string[] = [];
+    for (const f of files) {
+      base64Arr.push(await fileToBase64(f));
     }
+    setNewImagesBase64(prev => [...prev, ...base64Arr]);
+    // Set default thumbnail if not set yet
+    setThumbnail(prev => prev || existingImages[0] || base64Arr[0] || '');
+  };
+
+  const removeExistingImageAt = (index: number) => {
+    setExistingImages(prev => {
+      const next = prev.filter((_, i) => i !== index);
+      // If removed was thumbnail, pick next available
+      if (thumbnail === prev[index]) {
+        const fallback = next[0] || newImagesBase64[0] || '';
+        setThumbnail(fallback);
+      }
+      return next;
+    });
+  };
+
+  const removeNewImageAt = (index: number) => {
+    setNewImages(prev => prev.filter((_, i) => i !== index));
+    setNewImagesBase64(prev => {
+      const removed = prev[index];
+      const next = prev.filter((_, i) => i !== index);
+      if (thumbnail === removed) {
+        const fallback = existingImages[0] || next[0] || '';
+        setThumbnail(fallback);
+      }
+      return next;
+    });
   };
 
   const handleVolumeValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -217,17 +265,20 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
     if (!validateStep2()) return;
 
     try {
-      console.log('Submitting catalogue with files:', { image: !!image, thumbnail: !!thumbnail });
+      console.log('Submitting catalogue with files:', { existing: existingImages.length, new: newImages.length, thumbnail: !!thumbnail });
 
       // Prefer base64 payload so it works across machines without shared disk
       let payload: any = { ...form };
       // expiry is already a string in form state (e.g., '2 days' or '')
-      if (image) {
-        payload.image = await fileToBase64(image);
+      const combinedImages: string[] = [...existingImages, ...newImagesBase64];
+      if (combinedImages.length > 0) {
+        payload.images = combinedImages;
+        payload.image = combinedImages[0];
+      } else {
+        payload.images = [];
+        payload.image = '';
       }
-      if (thumbnail) {
-        payload.thumbnail = await fileToBase64(thumbnail);
-      }
+      if (thumbnail) payload.thumbnail = thumbnail;
 
       if (editId) {
         await updateCatalogue(editId, payload);
@@ -236,8 +287,10 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
       }
 
       setForm(initialState);
-      setImage(null);
-      setThumbnail(null);
+      setExistingImages([]);
+      setNewImages([]);
+      setNewImagesBase64([]);
+      setThumbnail('');
       setVolumeValue('');
       setVolumeUnit('');
       setExpiryValue('');
@@ -448,13 +501,53 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
               <>
                 <div style={{ fontWeight: 600, fontSize: 20, marginBottom: 16 }}>Product Information</div>
                 <div style={{ marginBottom: 16 }}>
-                  <label>Upload Image</label>
-                  <input type="file" accept="image/*" onChange={e => handleFileChange(e, 'image')} style={{ display: 'block', marginTop: 4 }} />
+                  <label>Upload Images</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={async (e) => {
+                      if (!e.target.files) return;
+                      await handleFilesSelected(e.target.files);
+                      // reset input so same files can be reselected if needed
+                      e.currentTarget.value = '';
+                    }}
+                    style={{ display: 'block', marginTop: 4 }}
+                  />
                 </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label>Upload Thumbnail Image</label>
-                  <input type="file" accept="image/*" onChange={e => handleFileChange(e, 'thumbnail')} style={{ display: 'block', marginTop: 4 }} />
-                </div>
+                {/* Preview existing images */}
+                {(existingImages.length > 0 || newImages.length > 0) && (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+                    {existingImages.map((src, idx) => (
+                      <div key={`exist-${idx}`} style={{ position: 'relative', border: thumbnail === src ? '2px solid #1976d2' : '1px solid #ccc', borderRadius: 6, padding: 2 }}>
+                        <img
+                          alt={`image-${idx}`}
+                          src={src}
+                          style={{ width: 80, height: 80, objectFit: 'cover', display: 'block', borderRadius: 4, cursor: 'pointer' }}
+                          onClick={() => setThumbnail(src)}
+                        />
+                        {thumbnail === src && (
+                          <div style={{ position: 'absolute', bottom: 2, left: 2, right: 2, background: 'rgba(25,118,210,0.85)', color: '#fff', fontSize: 10, textAlign: 'center', borderRadius: 4 }}>Thumbnail</div>
+                        )}
+                        <button type="button" onClick={() => removeExistingImageAt(idx)} style={{ position: 'absolute', top: -8, right: -8, width: 20, height: 20, borderRadius: '50%', border: 'none', background: '#ff4d4f', color: '#fff', cursor: 'pointer' }}>×</button>
+                      </div>
+                    ))}
+                    {newImages.map((f, idx) => (
+                      <div key={`new-${idx}`} style={{ position: 'relative', border: thumbnail === newImagesBase64[idx] ? '2px solid #1976d2' : '1px solid #ccc', borderRadius: 6, padding: 2 }}>
+                        <img
+                          alt={f.name}
+                          src={URL.createObjectURL(f)}
+                          style={{ width: 80, height: 80, objectFit: 'cover', display: 'block', borderRadius: 4, cursor: 'pointer' }}
+                          onClick={() => setThumbnail(newImagesBase64[idx])}
+                        />
+                        {thumbnail === newImagesBase64[idx] && (
+                          <div style={{ position: 'absolute', bottom: 2, left: 2, right: 2, background: 'rgba(25,118,210,0.85)', color: '#fff', fontSize: 10, textAlign: 'center', borderRadius: 4 }}>Thumbnail</div>
+                        )}
+                        <button type="button" onClick={() => removeNewImageAt(idx)} style={{ position: 'absolute', top: -8, right: -8, width: 20, height: 20, borderRadius: '50%', border: 'none', background: '#ff4d4f', color: '#fff', cursor: 'pointer' }}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {/* Barcode Generation Section */}
                 <div style={{ marginBottom: 16, padding: 16, backgroundColor: '#f8f9fa', borderRadius: 8, border: '1px solid #e9ecef' }}>
                   <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 12, color: '#495057' }}>Product Barcode</div>
