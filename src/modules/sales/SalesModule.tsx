@@ -5,39 +5,87 @@ interface SalesModuleProps {
   storeId?: string;
 }
 
+// ✅ Helper: get storeId safely from localStorage
+const getStoreIdFromStorage = (): string | undefined => {
+  const id = localStorage.getItem('storeId');
+  return id ?? undefined;
+};
+
 const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState<'all' | 'today' | 'cash' | 'card' | 'UPI'>('all');
+  const [resolvedStoreId, setResolvedStoreId] = useState<string | undefined>(
+    storeId || getStoreIdFromStorage()
+  );
+  const [filter, setFilter] = useState<'all' | 'today' | 'cash' | 'card' | 'UPI' | 'date' | 'day'>('all');
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDay, setSelectedDay] = useState('');
 
+  // ✅ Ensure storeId is available (from props or localStorage or API)
   useEffect(() => {
-    fetchSales();
-  }, [filter, storeId]);
+    const ensureStoreId = async () => {
+      if (!resolvedStoreId) {
+        try {
+          const response = await salesAPI.getAll(); // get all sales without store filter
+          if (response.data.length > 0 && response.data[0].storeId?.storeId) {
+            const id = response.data[0].storeId.storeId;
+            localStorage.setItem('storeId', id);
+            setResolvedStoreId(id);
+          }
+        } catch (err) {
+          console.error('Error fetching storeId:', err);
+        }
+      }
+    };
+    ensureStoreId();
+  }, [resolvedStoreId]);
 
   const fetchSales = async () => {
     try {
       setLoading(true);
-      let response;
-      if (storeId) {
-        // If storeId is provided, fetch sales for that store only
-  response = await salesAPI.getTransactionsByStore(storeId);
-      } else {
-        switch (filter) {
-          case 'today':
-            response = await salesAPI.getTodaysSales();
-            break;
-          case 'cash':
-          case 'card':
-          case 'UPI':
-            response = await salesAPI.getByPaymentMethod(filter);
-            break;
-          default:
-            response = await salesAPI.getAll();
-        }
+
+      if (!resolvedStoreId) {
+        setError('Store ID is missing. Please refresh or log in again.');
+        setSales([]);
+        return;
       }
-      // Ensure we have valid data and add default values for missing properties
+
+      let response;
+
+      switch (filter) {
+        case 'today':
+          response = await salesAPI.getTodaysSales(storeId);
+          break;
+        case 'cash':
+        case 'card':
+        case 'UPI':
+          response = await salesAPI.getByPaymentMethod(filter, storeId);
+          break;
+        case 'date':
+          if (selectedDate) {
+            response = await salesAPI.getByDate(selectedDate, storeId);
+          } else {
+            setSales([]);
+            setError('Please select a date');
+            setLoading(false);
+            return;
+          }
+          break;
+        case 'day':
+          if (selectedDay) {
+            response = await salesAPI.getByDay(selectedDay, storeId);
+          } else {
+            setSales([]);
+            setError('Please select a day');
+            setLoading(false);
+            return;
+          }
+          break;
+        default:
+          response = await salesAPI.getAll(storeId);
+      }
       const salesData = Array.isArray(response.data) ? response.data.map((sale: Sale) => ({
         ...sale,
         customerDetails: sale.customerDetails || {},
@@ -53,11 +101,15 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to fetch sales');
       console.error('Error fetching sales:', err);
-      setSales([]); // Set empty array on error
+      setSales([]);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchSales();
+  }, [filter, storeId, selectedDate, selectedDay]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -99,17 +151,29 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
     }
   };
 
+  const getPaymentPillStyle = (method: string) => {
+    switch (method) {
+      case 'UPI':
+        return { background: '#22c55e', color: 'white' };
+      case 'card':
+        return { background: '#dbeafe', color: '#1d4ed8' };
+      case 'cash':
+      default:
+        return { background: '#f1f5f9', color: '#334155' };
+    }
+  };
+
   if (loading) {
     return (
-      <div style={{ 
-        minHeight: '100vh', 
-        background: '#f8f9fb', 
+      <div style={{
+        minHeight: '100vh',
+        background: '#f8f9fb',
         padding: 32,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        <div style={{ 
+        <div style={{
           textAlign: 'center',
           color: '#666'
         }}>
@@ -122,21 +186,21 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
 
   if (error) {
     return (
-      <div style={{ 
-        minHeight: '100vh', 
-        background: '#f8f9fb', 
+      <div style={{
+        minHeight: '100vh',
+        background: '#f8f9fb',
         padding: 32,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        <div style={{ 
+        <div style={{
           textAlign: 'center',
           color: '#e53e3e'
         }}>
           <div style={{ fontSize: '24px', marginBottom: '16px' }}>❌</div>
           <div>{error}</div>
-          <button 
+          <button
             onClick={fetchSales}
             style={{
               marginTop: '16px',
@@ -157,23 +221,23 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8f9fb', padding: 32 }}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 32 
+        marginBottom: 32
       }}>
         <div>
           <h1 style={{ fontWeight: 700, fontSize: 32, marginBottom: 8, color: '#1a1a1a' }}>
-            My Sales
+            Sales
           </h1>
           <div style={{ color: '#6c6c6c', fontSize: 16 }}>
             View and manage all completed sales transactions
           </div>
         </div>
-        
-        <div style={{ 
-          display: 'flex', 
+
+        <div style={{
+          display: 'flex',
           gap: 12,
           alignItems: 'center'
         }}>
@@ -194,8 +258,48 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
             <option value="cash">Cash Payments</option>
             <option value="card">Card Payments</option>
             <option value="UPI">UPI Payments</option>
+            <option value="date">By Date</option> {/* New */}
+            <option value="day">By Day</option>   {/* New */}
           </select>
-          
+
+          {/* Date Picker */}
+          {filter === 'date' && (
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={e => setSelectedDate(e.target.value)}
+              style={{
+                padding: '8px 12px',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '14px'
+              }}
+            />
+          )}
+
+          {/* Day Selector */}
+          {filter === 'day' && (
+            <select
+              value={selectedDay}
+              onChange={e => setSelectedDay(e.target.value)}
+              style={{
+                padding: '8px 12px',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '14px'
+              }}
+            >
+              <option value="">Select Day</option>
+              <option value="Sunday">Sunday</option>
+              <option value="Monday">Monday</option>
+              <option value="Tuesday">Tuesday</option>
+              <option value="Wednesday">Wednesday</option>
+              <option value="Thursday">Thursday</option>
+              <option value="Friday">Friday</option>
+              <option value="Saturday">Saturday</option>
+            </select>
+          )}
+
           <button
             onClick={fetchSales}
             style={{
@@ -237,7 +341,7 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
         }}>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr',
+            gridTemplateColumns: '2fr 1.2fr 0.8fr 1.2fr 1.2fr 1fr',
             background: '#f8f9fa',
             padding: '16px 20px',
             borderBottom: '1px solid #e9ecef',
@@ -248,54 +352,67 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
             <div>Transaction ID</div>
             <div>Date & Time</div>
             <div>Items</div>
-            <div>Payment Method</div>
+            <div style={{ textAlign: 'center' }}>Payment Method</div>
             <div>Customer</div>
-            <div>Total Amount</div>
+            <div style={{ textAlign: 'right' }}>Total Amount</div>
           </div>
-          
-          {sales.map((sale) => (
+
+          {sales.map((sale, index) => (
             <div
               key={sale._id}
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr',
+                gridTemplateColumns: '2fr 1.2fr 0.8fr 1.2fr 1.2fr 1fr',
                 padding: '16px 20px',
                 borderBottom: '1px solid #f1f3f4',
                 cursor: 'pointer',
-                transition: 'background-color 0.2s'
+                transition: 'background-color 0.2s',
+                alignItems: 'center',
+                background: index % 2 === 0 ? 'white' : '#fcfcfd'
               }}
               onClick={() => setSelectedSale(sale)}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = '#f8f9fa';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'white';
+                e.currentTarget.style.backgroundColor = index % 2 === 0 ? 'white' : '#fcfcfd';
               }}
             >
               <div style={{ fontWeight: '500', color: '#e53e3e' }}>
                 {sale.transactionId || 'N/A'}
               </div>
-              <div style={{ color: '#666', fontSize: '13px' }}>
-                {formatDateTime(sale.dateTime || '')}
+              <div style={{ color: '#666', fontSize: 13, lineHeight: 1.2 }}>
+                <div>{new Date(sale.dateTime || '').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                <div style={{ fontSize: 12, color: '#9aa0a6' }}>{new Date(sale.dateTime || '').toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
               </div>
               <div style={{ color: '#666' }}>
                 {(sale.items || []).length} item{(sale.items || []).length !== 1 ? 's' : ''}
               </div>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '6px',
-                color: getPaymentMethodColor(sale.paymentMethod || 'cash')
-              }}>
-                <span>{getPaymentMethodIcon(sale.paymentMethod || 'cash')}</span>
-                <span style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: '500' }}>
-                  {sale.paymentMethod || 'cash'}
-                </span>
-              </div>
+              {(() => {
+                const method = sale.paymentMethod || 'cash';
+                const pill = getPaymentPillStyle(method);
+                return (
+                  <div style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: 6,
+                    color: pill.color,
+                    background: pill.background,
+                    padding: '4px 10px',
+                    borderRadius: 999,
+                    justifySelf: 'center'
+                  }}>
+                    <span style={{ fontSize: 12 }}>{getPaymentMethodIcon(method)}</span>
+                    <span style={{ textTransform: 'uppercase', fontSize: 12, fontWeight: 600 }}>
+                      {method}
+                    </span>
+                  </div>
+                );
+              })()}
               <div style={{ color: '#666', fontSize: '13px' }}>
                 {sale.customerDetails?.name || 'Walk-in Customer'}
               </div>
-              <div style={{ fontWeight: '600', color: '#38a169' }}>
+              <div style={{ fontWeight: '600', color: '#38a169', textAlign: 'right' }}>
                 {formatCurrency(sale.grandTotal || 0)}
               </div>
             </div>
@@ -350,13 +467,13 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
                 ×
               </button>
             </div>
-            
+
             <div style={{ padding: '24px' }}>
               <div style={{ marginBottom: '20px' }}>
                 <h3 style={{ margin: '0 0 12px 0', color: '#495057' }}>Transaction Info</h3>
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: '1fr 1fr', 
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
                   gap: '12px',
                   fontSize: '14px'
                 }}>

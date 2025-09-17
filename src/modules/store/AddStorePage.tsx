@@ -3,11 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { createStore, updateStore } from './storeApi';
 import { getOrganizations } from '../organization/organizationApi';
 import { compressImage } from '../../utils/imageCompression';
-import { Store } from './types';
+import { Store, StoreCreationResponse } from './types';
 import { Organization } from '../organization/types';
 
 const initialState: Store = {
-  storeId: '',
   storeName: '',
   storeLocation: '',
   storeAddress: '',
@@ -28,28 +27,42 @@ interface AddStorePageProps {
 const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData }) => {
   const [form, setForm] = useState<Store>(initialState);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [fieldErrors, setFieldErrors] = useState({
-    storeId: '',
     contactPersonName: '',
     contactNumber: '',
     email: '',
   });
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [loadingOrganizations, setLoadingOrganizations] = useState(true);
   const [storePicture, setStorePicture] = useState<File | null>(null);
 
   useEffect(() => {
     if (editData) {
+      console.log('Setting form data from editData:', editData);
       setForm(editData);
     }
   }, [editData]);
 
+  // Debug form state changes
+  useEffect(() => {
+    console.log('Form state changed:', form);
+  }, [form]);
+
   useEffect(() => {
     const fetchOrganizations = async () => {
       try {
+        console.log('Fetching organizations...');
+        setLoadingOrganizations(true);
         const res = await getOrganizations();
+        console.log('Organizations response:', res);
+        console.log('Organizations data:', res.data);
         setOrganizations(res.data as Organization[]);
       } catch (error) {
         console.error('Error fetching organizations:', error);
+        setError('Failed to load organizations. Please refresh the page.');
+      } finally {
+        setLoadingOrganizations(false);
       }
     };
     fetchOrganizations();
@@ -60,13 +73,17 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
     let newValue = value;
     let errorMsg = '';
 
-    if (name === 'storeId') {
-      // Only allow alphanumeric
-      if (/[^a-zA-Z0-9]/.test(value)) {
-        errorMsg = 'Special characters not allowed';
-        newValue = value.replace(/[^a-zA-Z0-9]/g, '');
-      }
-    }
+    
+
+    // if (name === 'storeId') {
+    //   // Only allow alphanumeric
+    //   if (/[^a-zA-Z0-9]/.test(value)) {
+    //     errorMsg = 'Special characters not allowed';
+    //     newValue = value.replace(/[^a-zA-Z0-9]/g, '');
+    //   }
+    // }
+
+
     if (name === 'contactPersonName') {
       // Only allow alphabets and spaces
       if (/[^a-zA-Z\s]/.test(value)) {
@@ -88,6 +105,12 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
         errorMsg = 'Only lowercase letters, numbers, and @ - _ + . allowed';
         newValue = value.replace(/[^a-z0-9@\-_.+]/g, '').replace(/[A-Z]/g, '');
       }
+    }
+    if (name === 'gstRate') {
+      console.log('Updating gstRate from', form.gstRate, 'to', Number(value));
+      setForm({ ...form, gstRate: Number(value) });
+      setFieldErrors(prev => ({ ...prev, [name]: errorMsg }));
+      return;
     }
 
     setForm({ ...form, [name]: newValue });
@@ -119,10 +142,6 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
   };
 
   const validate = () => {
-    if (!/^[a-zA-Z0-9]+$/.test(form.storeId)) {
-      setFieldErrors(prev => ({ ...prev, storeId: 'Special characters not allowed' }));
-      return false;
-    }
     if (!/^[a-zA-Z\s]+$/.test(form.contactPersonName)) {
       setFieldErrors(prev => ({ ...prev, contactPersonName: 'Only alphabets allowed' }));
       return false;
@@ -136,21 +155,42 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
       return false;
     }
     setError('');
-    setFieldErrors({ storeId: '', contactPersonName: '', contactNumber: '', email: '' });
+    setFieldErrors({ contactPersonName: '', contactNumber: '', email: '' });
     return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
-    if (editId) {
-      await updateStore(editId, form);
-    } else {
-      await createStore(form);
+    
+    setError('');
+    setSuccess('');
+    
+    try {
+      if (editId) {
+        await updateStore(editId, form);
+        setSuccess('Store updated successfully!');
+      } else {
+        const response = await createStore(form);
+        const data: StoreCreationResponse = response.data;
+        
+        if (data.success) {
+          setSuccess(`Store created successfully! Store ID: ${data.store.storeId}. ${data.emailSent ? 'Signup email sent to contact person.' : 'Email notification failed, but store was created.'}`);
+        } else {
+          setError(data.message || 'Failed to create store');
+        }
+      }
+      
+      // Reset form after successful creation/update
+      setTimeout(() => {
+        setForm(initialState);
+        setStorePicture(null);
+        onBack();
+      }, 2000);
+    } catch (err: any) {
+      console.error('Store operation error:', err);
+      setError(err.response?.data?.message || err.message || 'An error occurred');
     }
-    setForm(initialState);
-    setStorePicture(null);
-    onBack();
   };
 
   return (
@@ -170,9 +210,9 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
                 <input name="storeName" placeholder="Enter store name" value={form.storeName} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
               </div>
               <div style={{ flex: 1 }}>
-                <label style={{ fontWeight: 500 }}>Store ID <span style={{ color: 'red' }}>*</span></label>
-                <input name="storeId" placeholder="Enter store ID" value={form.storeId} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
-                {fieldErrors.storeId && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.storeId}</div>}
+                <label style={{ fontWeight: 500 }}>Store ID</label>
+                <input disabled placeholder="Auto-generated (STORE0001, STORE0002...)" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #e0e0e0', marginTop: 4, background: '#f5f5f5', color: '#666' }} />
+                <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>Store ID will be automatically generated</div>
               </div>
             </div>
             <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
@@ -227,17 +267,89 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ fontWeight: 500 }}>Organization *</label>
-                <select name="organizationId" value={form.organizationId} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }}>
-                  <option value="">Select an organization</option>
+                <select 
+                  name="organizationId" 
+                  value={form.organizationId} 
+                  onChange={handleChange} 
+                  required 
+                  disabled={loadingOrganizations}
+                  style={{ 
+                    width: '100%', 
+                    padding: 10, 
+                    borderRadius: 6, 
+                    border: '1px solid #ccc', 
+                    marginTop: 4,
+                    background: loadingOrganizations ? '#f5f5f5' : 'white',
+                    color: loadingOrganizations ? '#666' : 'black'
+                  }}
+                >
+                  <option value="">
+                    {loadingOrganizations ? 'Loading organizations...' : 'Select an organization'}
+                  </option>
                   {organizations.map(org => (
                     <option key={org._id} value={org._id}>
                       {org.organizationName} ({org.organizationId})
                     </option>
                   ))}
                 </select>
+                {loadingOrganizations && (
+                  <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                    Loading organizations...
+                  </div>
+                )}
+                {!loadingOrganizations && organizations.length === 0 && (
+                  <div style={{ fontSize: 12, color: '#dc2626', marginTop: 4 }}>
+                    No organizations found. Please create an organization first.
+                  </div>
+                )}
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontWeight: 500 }}>GST Rate (%) <span style={{ color: 'red' }}>*</span></label>
+                <input 
+                  name="gstRate" 
+                  type="number" 
+                  min={0} 
+                  max={100} 
+                  step={0.01}
+                  value={form.gstRate ?? 18} 
+                  onChange={handleChange} 
+                  required 
+                  placeholder="e.g. 18 or 12.5"
+                  style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} 
+                />
+                <div style={{ fontSize: 12, color: '#6c6c6c', marginTop: 6 }}>Enter GST percentage for this store; used for POS, sales and invoices.</div>
               </div>
             </div>
-            {error && <div style={{ color: 'red', marginBottom: 16 }}>{error}</div>}
+            {error && (
+              <div style={{ 
+                background: '#fef2f2', 
+                border: '1px solid #fecaca',
+                color: '#dc2626', 
+                padding: '12px 16px', 
+                borderRadius: '8px', 
+                marginBottom: '16px',
+                fontSize: '14px',
+                textAlign: 'center',
+                fontWeight: '500'
+              }}>
+                ⚠️ {error}
+              </div>
+            )}
+            {success && (
+              <div style={{ 
+                background: '#f0fff4', 
+                border: '1px solid #bbf7d0',
+                color: '#16a34a', 
+                padding: '12px 16px', 
+                borderRadius: '8px', 
+                marginBottom: '16px',
+                fontSize: '14px',
+                textAlign: 'center',
+                fontWeight: '500'
+              }}>
+                ✅ {success}
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 16, marginTop: 32 }}>
               <button type="button" onClick={onBack} style={{ background: 'none', border: 'none', color: '#6c3fc5', fontWeight: 600, fontSize: 16, cursor: 'pointer' }}>Cancel</button>
               <button type="submit" style={{ background: '#6c3fc5', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 16, padding: '10px 32px', cursor: 'pointer' }}>{editId ? 'Update Store' : 'Add Store'}</button>

@@ -27,6 +27,7 @@ const CategoryModule: React.FC = () => {
     setCategories(sorted);
   };
 
+
   // Modal state for viewing catalogue items
   const [modalCategoryId, setModalCategoryId] = useState<string | null>(null);
   const [modalCatalogues, setModalCatalogues] = useState<any[]>([]);
