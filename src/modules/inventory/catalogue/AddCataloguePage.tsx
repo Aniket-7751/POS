@@ -40,18 +40,12 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<Catalogue>(initialState);
   const [error, setError] = useState('');
-<<<<<<< HEAD
   // Existing image URLs/base64 (from server)
   const [existingImages, setExistingImages] = useState<string[]>([]);
   // Newly added images (files) and their base64 versions
   const [newImages, setNewImages] = useState<File[]>([]);
   const [newImagesBase64, setNewImagesBase64] = useState<string[]>([]);
   const [thumbnail, setThumbnail] = useState<string>('');
-=======
-  const [images, setImages] = useState<File[]>([]);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [thumbnailIdx, setThumbnailIdx] = useState<number>(0);
->>>>>>> origin/frontend
   const [categories, setCategories] = useState<Category[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [volumeValue, setVolumeValue] = useState('');
@@ -60,6 +54,9 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
   const [generatedBarcode, setGeneratedBarcode] = useState('');
   const [expiryValue, setExpiryValue] = useState('');
   const [expiryUnit, setExpiryUnit] = useState<'hours' | 'days'>('hours');
+  // Compat state used by recent edits
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [thumbnailIdx, setThumbnailIdx] = useState<number>(0);
 
   useEffect(() => {
     if (editData) {
@@ -201,7 +198,6 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
     }
   };
 
-<<<<<<< HEAD
   // removed legacy handleFileChange (single image/thumbnail)
 
   const handleFilesSelected = async (fileList: FileList) => {
@@ -212,17 +208,6 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
     const base64Arr: string[] = [];
     for (const f of files) {
       base64Arr.push(await fileToBase64(f));
-=======
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'thumbnail') => {
-    if (type === 'image' && e.target.files) {
-      const files = Array.from(e.target.files);
-      setImages(files);
-      // Generate previews
-      Promise.all(files.map(file => fileToBase64(file))).then(previews => {
-        setImagePreviews(previews);
-      });
-      setThumbnailIdx(0); // Default to first image
->>>>>>> origin/frontend
     }
     setNewImagesBase64(prev => [...prev, ...base64Arr]);
     // Set default thumbnail if not set yet
@@ -294,7 +279,6 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
     if (!validateStep2()) return;
 
     try {
-<<<<<<< HEAD
       console.log('Submitting catalogue with files:', { existing: existingImages.length, new: newImages.length, thumbnail: !!thumbnail });
 
       // Prefer base64 payload so it works across machines without shared disk
@@ -310,35 +294,16 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
       }
       if (thumbnail) payload.thumbnail = thumbnail;
 
-=======
-      let payload: any = { ...form };
-      // expiry is already a string in form state (e.g., '2 days' or '')
-      if (images.length > 0) {
-        // Compress and convert all images to base64
-        const base64Images = await Promise.all(images.map(file => fileToBase64(file)));
-        payload.images = base64Images;
-        payload.thumbnail = base64Images[thumbnailIdx] || base64Images[0];
-      } else if (imagePreviews.length > 0) {
-        payload.images = imagePreviews;
-        payload.thumbnail = imagePreviews[thumbnailIdx] || imagePreviews[0];
-      }
->>>>>>> origin/frontend
       if (editId) {
         await updateCatalogue(editId, payload);
       } else {
         await createCatalogue(payload);
       }
       setForm(initialState);
-<<<<<<< HEAD
       setExistingImages([]);
       setNewImages([]);
       setNewImagesBase64([]);
       setThumbnail('');
-=======
-      setImages([]);
-      setImagePreviews([]);
-      setThumbnailIdx(0);
->>>>>>> origin/frontend
       setVolumeValue('');
       setVolumeUnit('');
       setExpiryValue('');
@@ -490,7 +455,6 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
               <>
                 <div style={{ fontWeight: 600, fontSize: 20, marginBottom: 16 }}>Product Images</div>
                 <div style={{ marginBottom: 16 }}>
-<<<<<<< HEAD
                   <label>Upload Images</label>
                   <input
                     type="file"
@@ -504,19 +468,6 @@ const AddCataloguePage: React.FC<AddCataloguePageProps> = ({ onBack, editId, edi
                     }}
                     style={{ display: 'block', marginTop: 4 }}
                   />
-=======
-                  <label>Upload Images (multiple allowed, max 5)</label>
-                  <input type="file" accept="image/*" multiple onChange={e => handleFileChange(e, 'image')} style={{ display: 'block', marginTop: 4 }} />
-                  <div style={{ display: 'flex', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
-                    {imagePreviews.map((img, idx) => (
-                      <div key={idx} style={{ position: 'relative', display: 'inline-block' }}>
-                        <img src={img} alt={`Preview ${idx + 1}`} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8, border: idx === thumbnailIdx ? '2px solid #6c3fc5' : '1px solid #ccc' }} />
-                        <button type="button" onClick={() => setThumbnailIdx(idx)} style={{ position: 'absolute', top: 4, right: 4, background: idx === thumbnailIdx ? '#6c3fc5' : '#fff', color: idx === thumbnailIdx ? '#fff' : '#6c3fc5', border: '1px solid #6c3fc5', borderRadius: '50%', width: 24, height: 24, cursor: 'pointer', fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Set as thumbnail">{idx === thumbnailIdx ? '✓' : '○'}</button>
-                      </div>
-                    ))}
-                  </div>
-                  {imagePreviews.length > 0 && <div style={{ marginTop: 8, fontSize: 13, color: '#6c3fc5' }}>Select one image as thumbnail</div>}
->>>>>>> origin/frontend
                 </div>
                 {/* Preview existing images */}
                 {(existingImages.length > 0 || newImages.length > 0) && (
