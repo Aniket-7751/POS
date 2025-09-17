@@ -7,7 +7,7 @@ export interface Store {
   contactPersonName: string;
   contactNumber: string;
   email: string;
-  storePicture?: string;
+  storePicture?: string | null;
   status: 'active' | 'inactive';
   organizationId: string;
   createdAt?: string;

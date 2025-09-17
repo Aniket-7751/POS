@@ -13,11 +13,12 @@ const initialState: Store = {
   contactPersonName: '',
   contactNumber: '',
   email: '',
-  storePicture: '',
+  storePicture: null,
   status: 'active',
   organizationId: '',
   gstRate: 18,
 };
+
 
 interface AddStorePageProps {
   onBack: () => void;
@@ -29,14 +30,11 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
   const [form, setForm] = useState<Store>(initialState);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [fieldErrors, setFieldErrors] = useState({
-    contactPersonName: '',
-    contactNumber: '',
-    email: '',
-  });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loadingOrganizations, setLoadingOrganizations] = useState(true);
   const [storePicture, setStorePicture] = useState<File | null>(null);
+  
 
   useEffect(() => {
     if (editData) {
@@ -115,6 +113,17 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
     setFieldErrors(prev => ({ ...prev, [name]: errorMsg }));
   };
 
+  const requiredMessages: Record<string, string> = {
+    storeName: 'Store name is required',
+    storeLocation: 'Location is required',
+    storeAddress: 'Address is required',
+    contactPersonName: 'Contact name is required',
+    contactNumber: 'Contact number is required',
+    email: 'Email is required',
+    organizationId: 'Organization is required',
+    gstRate: 'GST rate is required',
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -139,22 +148,36 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
     }
   };
 
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    let msg = '';
+    if (!value || String(value).trim() === '') {
+      msg = requiredMessages[name] || 'Required';
+    } else {
+      if (name === 'contactPersonName' && !/^[a-zA-Z\s]+$/.test(value)) msg = 'Only alphabets allowed';
+      if (name === 'contactNumber' && !/^\d{10}$/.test(value)) msg = 'Contact number must be 10 digits';
+      if (name === 'email' && !/^[a-z0-9@\-_.+]+$/.test(value)) msg = 'Only lowercase letters, numbers, and @ - _ + . allowed';
+      if (name === 'gstRate' && (Number(value) < 0 || Number(value) > 100)) msg = 'GST rate must be between 0 and 100';
+    }
+    setFieldErrors(prev => ({ ...prev, [name]: msg }));
+  };
+
   const validate = () => {
-    if (!/^[a-zA-Z\s]+$/.test(form.contactPersonName)) {
-      setFieldErrors(prev => ({ ...prev, contactPersonName: 'Only alphabets allowed' }));
-      return false;
-    }
-    if (!/^\d{10}$/.test(form.contactNumber)) {
-      setFieldErrors(prev => ({ ...prev, contactNumber: 'Contact number must be 10 digits' }));
-      return false;
-    }
-    if (!/^[a-z0-9@\-_.+]+$/.test(form.email)) {
-      setFieldErrors(prev => ({ ...prev, email: 'Only lowercase letters, numbers, and @ - _ + . allowed' }));
-      return false;
-    }
+    const errors: Record<string, string> = {};
+    Object.keys(requiredMessages).forEach((field) => {
+      const value = (form as any)[field];
+      if (value === undefined || value === null || String(value).trim() === '') {
+        errors[field] = requiredMessages[field];
+      }
+    });
+    if (form.contactPersonName && !/^[a-zA-Z\s]+$/.test(form.contactPersonName)) errors.contactPersonName = 'Only alphabets allowed';
+    if (form.contactNumber && !/^\d{10}$/.test(form.contactNumber)) errors.contactNumber = 'Contact number must be 10 digits';
+    if (form.email && !/^[a-z0-9@\-_.+]+$/.test(form.email)) errors.email = 'Only lowercase letters, numbers, and @ - _ + . allowed';
+    if (form.gstRate !== undefined && (Number(form.gstRate) < 0 || Number(form.gstRate) > 100)) errors.gstRate = 'GST rate must be between 0 and 100';
+
+    setFieldErrors(errors);
     setError('');
-    setFieldErrors({ contactPersonName: '', contactNumber: '', email: '' });
-    return true;
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -205,7 +228,8 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
             <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
               <div style={{ flex: 1 }}>
                 <label style={{ fontWeight: 500 }}>Store Name <span style={{ color: 'red' }}>*</span></label>
-                <input name="storeName" placeholder="Enter store name" value={form.storeName} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                <input name="storeName" placeholder="Enter store name" value={form.storeName} onChange={handleChange} onBlur={handleBlur} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                {fieldErrors.storeName && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.storeName}</div>}
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ fontWeight: 500 }}>Store ID</label>
@@ -216,36 +240,38 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
             <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
               <div style={{ flex: 1 }}>
                 <label style={{ fontWeight: 500 }}>Location <span style={{ color: 'red' }}>*</span></label>
-                <input name="storeLocation" placeholder="Enter store location" value={form.storeLocation} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                <input name="storeLocation" placeholder="Enter store location" value={form.storeLocation} onChange={handleChange} onBlur={handleBlur} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                {fieldErrors.storeLocation && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.storeLocation}</div>}
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ fontWeight: 500 }}>Address <span style={{ color: 'red' }}>*</span></label>
-                <input name="storeAddress" placeholder="Enter store address" value={form.storeAddress} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                <input name="storeAddress" placeholder="Enter store address" value={form.storeAddress} onChange={handleChange} onBlur={handleBlur} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                {fieldErrors.storeAddress && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.storeAddress}</div>}
               </div>
             </div>
             <div style={{ fontWeight: 700, fontSize: 22, marginBottom: 24 }}>Point of Contact</div>
             <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
               <div style={{ flex: 1 }}>
                 <label style={{ fontWeight: 500 }}>Contact Name <span style={{ color: 'red' }}>*</span></label>
-                <input name="contactPersonName" placeholder="Enter contact name" value={form.contactPersonName} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                <input name="contactPersonName" placeholder="Enter contact name" value={form.contactPersonName} onChange={handleChange} onBlur={handleBlur} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
                 {fieldErrors.contactPersonName && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.contactPersonName}</div>}
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ fontWeight: 500 }}>Contact Number <span style={{ color: 'red' }}>*</span></label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ padding: '8px 12px', border: '1px solid #ccc', borderRadius: 6, background: '#f5f5f5', color: '#6c3fc5', fontWeight: 600 }}>+91</span>
-                  <input name="contactNumber" placeholder="Enter contact number" value={form.contactNumber} onChange={handleChange} required maxLength={10} style={{ flex: 1, padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                  <input name="contactNumber" placeholder="Enter contact number" value={form.contactNumber} onChange={handleChange} onBlur={handleBlur} required maxLength={10} style={{ flex: 1, padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
                 </div>
                 {fieldErrors.contactNumber && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.contactNumber}</div>}
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ fontWeight: 500 }}>Email <span style={{ color: 'red' }}>*</span></label>
-                <input name="email" placeholder="Enter email" value={form.email} onChange={handleChange} required type="text" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                <input name="email" placeholder="Enter email" value={form.email} onChange={handleChange} onBlur={handleBlur} required type="text" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
                 {fieldErrors.email && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.email}</div>}
               </div>
             </div>
             <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
-              <div style={{ flex: 1 }}>
+              {/* <div style={{ flex: 1 }}>
                 <label style={{ fontWeight: 500 }}>Store Picture</label>
                 <input type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'block', marginTop: 4 }} />
                 {form.storePicture && (
@@ -262,13 +288,61 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
                     }} 
                   />
                 )}
-              </div>
+              </div> */}
+              <div style={{ flex: 1, position: 'relative' }}>
+    <label style={{ fontWeight: 500 }}>Store Picture</label>
+    <input
+      type="file"
+      accept="image/*"
+      onChange={handleFileChange}
+      style={{ display: 'block', marginTop: 4 }}
+    />
+
+    {form.storePicture && (
+      <div style={{ position: 'relative', display: 'inline-block', marginTop: 8 }}>
+        <img
+          src={form.storePicture}
+          alt="Store Preview"
+          style={{
+            width: 100,
+            height: 100,
+            objectFit: 'cover',
+            borderRadius: 6,
+            border: '1px solid #ddd',
+          }}
+        />
+        {/* X button */}
+        <button
+          type="button"
+          onClick={() => setForm({ ...form, storePicture: null })}
+          style={{
+            position: 'absolute',
+            top: -8,
+            right: -8,
+            background: '#ff4d4f',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '50%',
+            width: 20,
+            height: 20,
+            cursor: 'pointer',
+            fontSize: 12,
+            lineHeight: '20px',
+            textAlign: 'center',
+          }}
+        >
+          ×
+        </button>
+      </div>
+    )}
+  </div>
               <div style={{ flex: 1 }}>
                 <label style={{ fontWeight: 500 }}>Organization *</label>
                 <select 
                   name="organizationId" 
                   value={form.organizationId} 
                   onChange={handleChange} 
+                  onBlur={handleBlur}
                   required 
                   disabled={loadingOrganizations}
                   style={{ 
@@ -290,6 +364,7 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
                     </option>
                   ))}
                 </select>
+                {fieldErrors.organizationId && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.organizationId}</div>}
                 {loadingOrganizations && (
                   <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
                     Loading organizations...
@@ -311,10 +386,12 @@ const AddStorePage: React.FC<AddStorePageProps> = ({ onBack, editId, editData })
                   step={0.01}
                   value={form.gstRate ?? 18} 
                   onChange={handleChange} 
+                  onBlur={handleBlur}
                   required 
                   placeholder="e.g. 18 or 12.5"
                   style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} 
                 />
+                {fieldErrors.gstRate && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.gstRate}</div>}
                 <div style={{ fontSize: 12, color: '#6c6c6c', marginTop: 6 }}>Enter GST percentage for this store; used for POS, sales and invoices.</div>
               </div>
             </div>

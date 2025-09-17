@@ -26,13 +26,7 @@ const AddOrganizationPage: React.FC<AddOrganizationPageProps> = ({ onBack, editI
   const [form, setForm] = useState<Organization>(initialState);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [fieldErrors, setFieldErrors] = useState({
-    contactNumber: '',
-    contactPersonName: '',
-    panNumber: '',
-    gstNumber: '',
-    email: '',
-  });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [logoFile, setLogoFile] = useState<File | null>(null);
 
   useEffect(() => {
@@ -118,34 +112,51 @@ const AddOrganizationPage: React.FC<AddOrganizationPageProps> = ({ onBack, editI
     }
   };
 
+  const requiredMessages: Record<string, string> = {
+    organizationName: 'Organization name is required',
+    organizationId: 'Organization ID is required',
+    address: 'Address is required',
+    contactPersonName: 'Contact person name is required',
+    contactNumber: 'Contact number is required',
+    email: 'Email is required',
+    gstNumber: 'GST number is required',
+    panNumber: 'PAN number is required',
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    let msg = '';
+    if (!value || value.trim() === '') {
+      msg = requiredMessages[name] || 'Required';
+    } else {
+      if (name === 'organizationId' && !/^[a-zA-Z0-9]+$/.test(value)) msg = 'Special characters not allowed';
+      if (name === 'contactNumber' && !/^\d{10}$/.test(value)) msg = 'Phone must be 10 digits';
+      if (name === 'contactPersonName' && !/^[a-zA-Z\s]+$/.test(value)) msg = 'Only alphabets allowed';
+      if (name === 'panNumber' && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(value)) msg = 'PAN Number must be in valid format (e.g., AAAAA0000A)';
+      if (name === 'gstNumber' && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(value)) msg = 'GST Number must be in valid format (e.g., 22AAAAA0000A1Z5)';
+      if (name === 'email' && !/^[a-z0-9@\-_.+]+$/.test(value)) msg = 'Only lowercase letters, numbers, and @ - _ + . allowed';
+    }
+    setFieldErrors(prev => ({ ...prev, [name]: msg }));
+  };
+
   const validate = () => {
-    if (!/^[a-zA-Z0-9]+$/.test(form.organizationId)) {
-      setFieldErrors(prev => ({ ...prev, organizationId: 'Special characters not allowed' }));
-      return false;
-    }
-    if (!/^\d{10}$/.test(form.contactNumber)) {
-      setFieldErrors(prev => ({ ...prev, contactNumber: 'Phone must be 10 digits' }));
-      return false;
-    }
-    if (!/^[a-zA-Z\s]+$/.test(form.contactPersonName)) {
-      setFieldErrors(prev => ({ ...prev, contactPersonName: 'Only alphabets allowed' }));
-      return false;
-    }
-    if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(form.panNumber)) {
-      setFieldErrors(prev => ({ ...prev, panNumber: 'PAN Number must be in valid format (e.g., AAAAA0000A)' }));
-      return false;
-    }
-    if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(form.gstNumber)) {
-      setFieldErrors(prev => ({ ...prev, gstNumber: 'GST Number must be in valid format (e.g., 22AAAAA0000A1Z5)' }));
-      return false;
-    }
-    if (!/^[a-z0-9@\-_.+]+$/.test(form.email)) {
-      setFieldErrors(prev => ({ ...prev, email: 'Only lowercase letters, numbers, and @ - _ + . allowed' }));
-      return false;
-    }
+    const errors: Record<string, string> = {};
+    Object.keys(requiredMessages).forEach((field) => {
+      const value = (form as any)[field];
+      if (!value || String(value).trim() === '') {
+        errors[field] = requiredMessages[field];
+      }
+    });
+    if (form.organizationId && !/^[a-zA-Z0-9]+$/.test(form.organizationId)) errors.organizationId = 'Special characters not allowed';
+    if (form.contactNumber && !/^\d{10}$/.test(form.contactNumber)) errors.contactNumber = 'Phone must be 10 digits';
+    if (form.contactPersonName && !/^[a-zA-Z\s]+$/.test(form.contactPersonName)) errors.contactPersonName = 'Only alphabets allowed';
+    if (form.panNumber && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(form.panNumber)) errors.panNumber = 'PAN Number must be in valid format (e.g., AAAAA0000A)';
+    if (form.gstNumber && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(form.gstNumber)) errors.gstNumber = 'GST Number must be in valid format (e.g., 22AAAAA0000A1Z5)';
+    if (form.email && !/^[a-z0-9@\-_.+]+$/.test(form.email)) errors.email = 'Only lowercase letters, numbers, and @ - _ + . allowed';
+
+    setFieldErrors(errors);
     setError('');
-    setFieldErrors({ contactNumber: '', contactPersonName: '', panNumber: '', gstNumber: '', email: '' });
-    return true;
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -228,34 +239,37 @@ const AddOrganizationPage: React.FC<AddOrganizationPageProps> = ({ onBack, editI
             <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
               <div style={{ flex: 1 }}>
                 <label style={{ fontWeight: 500 }}>Organization Name <span style={{ color: 'red' }}>*</span></label>
-                <input name="organizationName" placeholder="Enter organization name" value={form.organizationName} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                <input name="organizationName" placeholder="Enter organization name" value={form.organizationName} onChange={handleChange} onBlur={handleBlur} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                {fieldErrors.organizationName && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.organizationName}</div>}
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ fontWeight: 500 }}>Organization ID <span style={{ color: 'red' }}>*</span></label>
-                <input name="organizationId" placeholder="Enter organization ID" value={form.organizationId} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                <input name="organizationId" placeholder="Enter organization ID" value={form.organizationId} onChange={handleChange} onBlur={handleBlur} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                {fieldErrors.organizationId && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.organizationId}</div>}
               </div>
             </div>
             <div style={{ marginBottom: 24 }}>
               <label style={{ fontWeight: 500 }}>Address <span style={{ color: 'red' }}>*</span></label>
-              <input name="address" placeholder="Enter organization address" value={form.address} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+              <input name="address" placeholder="Enter organization address" value={form.address} onChange={handleChange} onBlur={handleBlur} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+              {fieldErrors.address && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.address}</div>}
             </div>
             <div style={{ fontWeight: 700, fontSize: 22, marginBottom: 24 }}>Contact Information</div>
             <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
               <div style={{ flex: 1 }}>
                 <label style={{ fontWeight: 500 }}>Contact Person Name <span style={{ color: 'red' }}>*</span></label>
-                <input name="contactPersonName" placeholder="Enter contact person name" value={form.contactPersonName} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                <input name="contactPersonName" placeholder="Enter contact person name" value={form.contactPersonName} onChange={handleChange} onBlur={handleBlur} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
                 {fieldErrors.contactPersonName && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.contactPersonName}</div>}
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ fontWeight: 500 }}>Contact Number <span style={{ color: 'red' }}>*</span></label>
-                <input name="contactNumber" placeholder="Phone (10 digits)" value={form.contactNumber} onChange={handleChange} required maxLength={10} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                <input name="contactNumber" placeholder="Phone (10 digits)" value={form.contactNumber} onChange={handleChange} onBlur={handleBlur} required maxLength={10} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
                 {fieldErrors.contactNumber && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.contactNumber}</div>}
               </div>
             </div>
             <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
               <div style={{ flex: 1 }}>
                 <label style={{ fontWeight: 500 }}>Email <span style={{ color: 'red' }}>*</span></label>
-                <input name="email" placeholder="Enter organization email" value={form.email} onChange={handleChange} required type="text" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                <input name="email" placeholder="Enter organization email" value={form.email} onChange={handleChange} onBlur={handleBlur} required type="text" style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
                 {fieldErrors.email && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.email}</div>}
               </div>
               <div style={{ flex: 1 }}>
@@ -281,12 +295,12 @@ const AddOrganizationPage: React.FC<AddOrganizationPageProps> = ({ onBack, editI
             <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
               <div style={{ flex: 1 }}>
                 <label style={{ fontWeight: 500 }}>GST Number <span style={{ color: 'red' }}>*</span></label>
-                <input name="gstNumber" placeholder="e.g., 22AAAAA0000A1Z5" value={form.gstNumber} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                <input name="gstNumber" placeholder="e.g., 22AAAAA0000A1Z5" value={form.gstNumber} onChange={handleChange} onBlur={handleBlur} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
                 {fieldErrors.gstNumber && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.gstNumber}</div>}
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ fontWeight: 500 }}>PAN Number <span style={{ color: 'red' }}>*</span></label>
-                <input name="panNumber" placeholder="e.g., AAAAA0000A" value={form.panNumber} onChange={handleChange} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
+                <input name="panNumber" placeholder="e.g., AAAAA0000A" value={form.panNumber} onChange={handleChange} onBlur={handleBlur} required style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} />
                 {fieldErrors.panNumber && <div style={{ color: 'red', fontSize: 13 }}>{fieldErrors.panNumber}</div>}
               </div>
             </div>
