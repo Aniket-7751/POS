@@ -1,35 +1,53 @@
+// Endpoint to generate itemId and sku
+exports.generateIds = (req, res) => {
+  const sku = `SKU${Math.floor(100000 + Math.random() * 900000)}`;
+  const itemId = `ITEM${Math.floor(100000 + Math.random() * 900000)}`;
+  res.json({ sku, itemId });
+};
 const Catalogue = require('../models/Catalogue');
 const path = require('path');
 
 exports.createCatalogue = async (req, res) => {
   try {
     const catalogueData = { ...req.body };
+    // Autogenerate SKU and Item ID if not provided
+    const skuArr = await Catalogue.find({}, 'sku').sort({ sku: -1 }).limit(1);
+    const itemArr = await Catalogue.find({}, 'itemId').sort({ itemId: -1 }).limit(1);
+    let nextSkuNum = 1;
+    let nextItemNum = 1;
+    if (skuArr.length > 0) {
+      const lastSku = skuArr[0].sku;
+      const match = lastSku.match(/SKU(\d+)/);
+      if (match) nextSkuNum = parseInt(match[1], 10) + 1;
+    }
+    if (itemArr.length > 0) {
+      const lastItem = itemArr[0].itemId;
+      const match = lastItem.match(/ITEM(\d+)/);
+      if (match) nextItemNum = parseInt(match[1], 10) + 1;
+    }
+    catalogueData.sku = `SKU${nextSkuNum.toString().padStart(3, '0')}`;
+    catalogueData.itemId = `ITEM${nextItemNum.toString().padStart(3, '0')}`;
+    catalogueData._id = catalogueData.itemId;
     
     // Parse nested fields sent as strings (e.g., from forms)
     if (typeof catalogueData.nutritionValue === 'string') {
       try { catalogueData.nutritionValue = JSON.parse(catalogueData.nutritionValue); } catch (_) {}
     }
 
-    // Accept base64 images directly via JSON
-    if (catalogueData.image && typeof catalogueData.image === 'string' && catalogueData.image.startsWith('data:image')) {
-      // keep as-is (base64 data URL)
+    // Accept multiple base64 images directly via JSON
+    if (Array.isArray(catalogueData.images)) {
+      // keep as-is (array of base64 data URLs)
+    } else if (catalogueData.image && typeof catalogueData.image === 'string' && catalogueData.image.startsWith('data:image')) {
+      // convert single image to array
+      catalogueData.images = [catalogueData.image];
     }
-    if (catalogueData.thumbnail && typeof catalogueData.thumbnail === 'string' && catalogueData.thumbnail.startsWith('data:image')) {
-      // keep as-is (base64 data URL)
-    }
-
-    console.log('Creating catalogue with data (pre-files):', { ...catalogueData, image: !!catalogueData.image, thumbnail: !!catalogueData.thumbnail });
-    console.log('Files received:', req.files);
-    
-    // Handle image uploads if files are present
-    if (req.files) {
-      if (req.files.image) {
-        catalogueData.image = `/uploads/${req.files.image[0].filename}`;
-        console.log('Image path set:', catalogueData.image);
-      }
-      if (req.files.thumbnail) {
-        catalogueData.thumbnail = `/uploads/${req.files.thumbnail[0].filename}`;
-        console.log('Thumbnail path set:', catalogueData.thumbnail);
+    // Remove old image/thumbnail fields
+    delete catalogueData.image;
+    // Thumbnail should be a string (base64 or path) and must be one of the images
+    if (catalogueData.thumbnail && Array.isArray(catalogueData.images)) {
+      if (!catalogueData.images.includes(catalogueData.thumbnail)) {
+        // If not present, add thumbnail to images array
+        catalogueData.images.push(catalogueData.thumbnail);
       }
     }
     
@@ -52,7 +70,18 @@ exports.createCatalogue = async (req, res) => {
 
 exports.getAllCatalogues = async (req, res) => {
   try {
-    const catalogues = await Catalogue.find();
+    let query = {};
+    if (req.query.search) {
+      const search = req.query.search.trim();
+      // Search by SKU id or Item Name (case-insensitive)
+      query = {
+        $or: [
+          { sku: { $regex: search, $options: 'i' } },
+          { itemName: { $regex: search, $options: 'i' } }
+        ]
+      };
+    }
+    const catalogues = await Catalogue.find(query);
     console.log('Retrieved catalogues:', catalogues.length, 'items');
     catalogues.forEach(cat => {
       console.log(`- ${cat.itemName}: image=${cat.image}, thumbnail=${cat.thumbnail}`);
@@ -78,22 +107,21 @@ exports.updateCatalogueById = async (req, res) => {
   try {
     const catalogueData = { ...req.body };
     
-    // Handle image uploads if files are present
-    if (req.files) {
-      if (req.files.image) {
-        catalogueData.image = `/uploads/${req.files.image[0].filename}`;
-      }
-      if (req.files.thumbnail) {
-        catalogueData.thumbnail = `/uploads/${req.files.thumbnail[0].filename}`;
-      }
+    // Accept multiple base64 images directly via JSON
+    if (Array.isArray(catalogueData.images)) {
+      // keep as-is (array of base64 data URLs)
+    } else if (catalogueData.image && typeof catalogueData.image === 'string' && catalogueData.image.startsWith('data:image')) {
+      // convert single image to array
+      catalogueData.images = [catalogueData.image];
     }
-    
-    // Accept base64 images directly via JSON
-    if (catalogueData.image && typeof catalogueData.image === 'string' && catalogueData.image.startsWith('data:image')) {
-      // keep as-is
-    }
-    if (catalogueData.thumbnail && typeof catalogueData.thumbnail === 'string' && catalogueData.thumbnail.startsWith('data:image')) {
-      // keep as-is
+    // Remove old image/thumbnail fields
+    delete catalogueData.image;
+    // Thumbnail should be a string (base64 or path) and must be one of the images
+    if (catalogueData.thumbnail && Array.isArray(catalogueData.images)) {
+      if (!catalogueData.images.includes(catalogueData.thumbnail)) {
+        // If not present, add thumbnail to images array
+        catalogueData.images.push(catalogueData.thumbnail);
+      }
     }
 
     // Parse nested fields sent as strings

@@ -3,6 +3,7 @@ const router = express.Router();
 const catalogueController = require('../controllers/catalogueController');
 const upload = require('../middleware/upload');
 
+router.get('/generate-ids', catalogueController.generateIds);
 router.post('/', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'thumbnail', maxCount: 1 }]), catalogueController.createCatalogue);
 router.get('/', catalogueController.getAllCatalogues);
 router.get('/:id', catalogueController.getCatalogueById);
