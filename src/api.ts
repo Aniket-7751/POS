@@ -3,9 +3,8 @@ import axios from 'axios';
 const API_BASE = 'http://localhost:5050/api';
 // const API_BASE = 'https://apis.pos.hutechsolutions.in/api';
 
-
 // Create axios instance with default config
-const api = axios.create({
+ export const api = axios.create({
   baseURL: API_BASE,
   headers: {
     'Content-Type': 'application/json',
@@ -40,7 +39,8 @@ export const authAPI = {
   
   // Signup endpoints
   organizationSignup: (data: { organizationId: string; email: string; password: string }) => api.post('/auth/organization/signup', data),
-  storeSignup: (data: { storeId: string; email: string; password: string }) => api.post('/auth/store/signup', data),
+  storeSignup: (data: { storeId: string; email: string; password: string; token?: string }) => api.post('/auth/store/signup', data),
+  verifyStoreSignupToken: (data: { email: string; storeId: string; token: string }) => api.post('/auth/store/verify-signup-token', data),
   
   // Legacy login endpoints (keeping for backward compatibility)
   organizationLogin: (data: { organizationId: string; email: string; password: string }) => api.post('/auth/organization/login', data),
@@ -76,11 +76,20 @@ export const storeAPI = {
     return api.put(`/stores/${id}`, data);
   },
   delete: (id: string) => api.delete(`/stores/${id}`),
+  // Store pricing overrides
+  listPrices: (storeId: string, sku?: string) => api.get(`/stores/${storeId}/prices${sku ? `?sku=${encodeURIComponent(sku)}` : ''}`),
+  upsertPrice: (storeId: string, sku: string, data: any) => api.put(`/stores/${storeId}/prices/${sku}`, data),
+  getEffectivePrice: (storeId: string, sku: string) => api.get(`/stores/${storeId}/prices/${sku}/effective`),
 };
 
 // Category API
 export const categoryAPI = {
-  getAll: () => api.get('/categories'),
+  getAll: (options?: { params?: any }) => {
+    if (options && options.params) {
+      return api.get('/categories', { params: options.params });
+    }
+    return api.get('/categories');
+  },
   getById: (id: string) => api.get(`/categories/${id}`),
   create: (data: any) => api.post('/categories', data),
   update: (id: string, data: any) => api.put(`/categories/${id}`, data),
@@ -89,7 +98,12 @@ export const categoryAPI = {
 
 // Catalogue API
 export const catalogueAPI = {
-  getAll: () => api.get('/catalogues'),
+  getAll: (options?: { params?: any }) => {
+    if (options && options.params) {
+      return api.get('/catalogues', { params: options.params });
+    }
+    return api.get('/catalogues');
+  },
   getById: (id: string) => api.get(`/catalogues/${id}`),
   create: (data: any) => api.post('/catalogues', data),
   update: (id: string, data: any) => api.put(`/catalogues/${id}`, data),
