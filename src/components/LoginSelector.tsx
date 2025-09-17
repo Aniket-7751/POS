@@ -314,6 +314,7 @@ const LoginSelector: React.FC<LoginSelectorProps> = ({ onLogin }) => {
               fontSize: '14px'
             }}>
               {loginType === 'organization' ? 'Organization ID' : 'Store ID'}
+              <span style={{ color: '#dc2626', marginLeft: '4px' }}>*</span>
             </label>
             <input
               type="text"
@@ -356,6 +357,7 @@ const LoginSelector: React.FC<LoginSelectorProps> = ({ onLogin }) => {
               fontSize: '14px'
             }}>
               Email Address
+              <span style={{ color: '#dc2626', marginLeft: '4px' }}>*</span>
             </label>
             <input
               type="email"
@@ -398,6 +400,7 @@ const LoginSelector: React.FC<LoginSelectorProps> = ({ onLogin }) => {
               fontSize: '14px'
             }}>
               Password
+              <span style={{ color: '#dc2626', marginLeft: '4px' }}>*</span>
             </label>
             <input
               type="password"

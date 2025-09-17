@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import salesAPI, { Sale } from './salesApi';
-import storeAPI, { Store } from '../store/storeApi';
+import { storeAPI } from '../../api';
 
 interface SalesModuleProps {
   storeId?: string;
@@ -14,7 +14,6 @@ const getStoreIdFromStorage = (): string | undefined => {
 
 const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
   const [sales, setSales] = useState<Sale[]>([]);
-  const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [resolvedStoreId, setResolvedStoreId] = useState<string | undefined>(
@@ -24,6 +23,8 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedDay, setSelectedDay] = useState('');
+  const [stores, setStores] = useState<Array<{ _id: string; storeName: string; storeId?: string }>>([]);
+  const [adminSelectedStoreId, setAdminSelectedStoreId] = useState<string>('');
 
   //const [selectedStore, setSelectedStore] = useState<string | undefined>(storeId || getStoreIdFromStorage());
   // ✅ Fetch stores once
@@ -62,26 +63,26 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
     try {
       setLoading(true);
 
-      if (!resolvedStoreId) {
-        setError('Store ID is missing. Please refresh or log in again.');
-        setSales([]);
-        return;
-      }
+      // Determine which store scope to use:
+      // - If SalesModule is rendered with a storeId prop (store user), always use it
+      // - If org admin selected a store, use that
+      // - Otherwise, query all stores (undefined storeId)
+      const targetStoreId = storeId ? storeId : (adminSelectedStoreId ? adminSelectedStoreId : undefined);
 
       let response;
 
       switch (filter) {
         case 'today':
-          response = await salesAPI.getTodaysSales(resolvedStoreId);
+          response = await salesAPI.getTodaysSales(targetStoreId);
           break;
         case 'cash':
         case 'card':
         case 'UPI':
-          response = await salesAPI.getByPaymentMethod(filter, resolvedStoreId);
+          response = await salesAPI.getByPaymentMethod(filter, targetStoreId);
           break;
         case 'date':
           if (selectedDate) {
-            response = await salesAPI.getByDate(selectedDate, resolvedStoreId);
+            response = await salesAPI.getByDate(selectedDate, targetStoreId);
           } else {
             setSales([]);
             setError('Please select a date');
@@ -91,7 +92,7 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
           break;
         case 'day':
           if (selectedDay) {
-            response = await salesAPI.getByDay(selectedDay, resolvedStoreId);
+            response = await salesAPI.getByDay(selectedDay, targetStoreId);
           } else {
             setSales([]);
             setError('Please select a day');
@@ -100,7 +101,7 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
           }
           break;
         default:
-          response = await salesAPI.getAll(resolvedStoreId);
+          response = await salesAPI.getAll(targetStoreId);
       }
       const salesData = Array.isArray(response.data) ? response.data.map((sale: Sale) => ({
         ...sale,
@@ -126,11 +127,22 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
   // 🔑 Re-fetch whenever filter, resolvedStoreId, date/day changes
   useEffect(() => {
     fetchSales();
-  }, [filter, resolvedStoreId, selectedDate, selectedDay]);
+  }, [filter, storeId, selectedDate, selectedDay, adminSelectedStoreId]);
 
-  // useEffect(() => {
-  //   fetchSales();
-  // }, [filter, storeId, selectedDate, selectedDay]);
+  // Load stores for org admins (no storeId prop)
+  useEffect(() => {
+    const loadStores = async () => {
+      if (!storeId) {
+        try {
+          const res = await storeAPI.getAll();
+          setStores(res.data || []);
+        } catch (e) {
+          setStores([]);
+        }
+      }
+    };
+    loadStores();
+  }, [storeId]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -169,6 +181,18 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
       case 'card': return '#3182ce';
       case 'UPI': return '#805ad5';
       default: return '#718096';
+    }
+  };
+
+  const getPaymentPillStyle = (method: string) => {
+    switch (method) {
+      case 'UPI':
+        return { background: '#22c55e', color: 'white' };
+      case 'card':
+        return { background: '#dbeafe', color: '#1d4ed8' };
+      case 'cash':
+      default:
+        return { background: '#f1f5f9', color: '#334155' };
     }
   };
 
@@ -238,7 +262,7 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
       }}>
         <div>
           <h1 style={{ fontWeight: 700, fontSize: 32, marginBottom: 8, color: '#1a1a1a' }}>
-            My Sales
+            Sales
           </h1>
           <div style={{ color: '#6c6c6c', fontSize: 16 }}>
             View and manage all completed sales transactions
@@ -250,33 +274,26 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
           gap: 12,
           alignItems: 'center'
         }}>
-
-          {/* Store Selector */}
-          <select
-            value={resolvedStoreId || ''}
-            onChange={(e) => {
-              const selected = e.target.value || undefined;
-              setResolvedStoreId(selected);
-              if (selected) localStorage.setItem('storeId', selected);
-            }}
-            style={{
-              padding: '8px 12px',
-              border: '1px solid #ddd',
-              borderRadius: '6px',
-              background: 'white',
-              fontSize: '14px',
-              cursor: 'pointer'
-            }}
-          >
-            <option value="">Select Store</option>
-            {stores.map((store) => (
-              <option key={store._id} value={store.storeId}>
-                {store.storeName}
-              </option>
-            ))}
-          </select>
-
-          {/* Existing Filter Dropdown */}
+          {/* Org Admin store selector */}
+          {!storeId && (
+            <select
+              value={adminSelectedStoreId}
+              onChange={(e) => setAdminSelectedStoreId(e.target.value)}
+              style={{
+                padding: '8px 12px',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                background: 'white',
+                fontSize: '14px',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="">All Stores</option>
+              {stores.map(s => (
+                <option key={s._id} value={s._id}>{s.storeName}{s.storeId ? ` (${s.storeId})` : ''}</option>
+              ))}
+            </select>
+          )}
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value as any)}
@@ -294,8 +311,8 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
             <option value="cash">Cash Payments</option>
             <option value="card">Card Payments</option>
             <option value="UPI">UPI Payments</option>
-            <option value="date">By Date</option> {/* New */}
-            <option value="day">By Day</option>   {/* New */}
+            {/* <option value="date">By Date</option> 
+            <option value="day">By Day</option>    */}
           </select>
 
           {/* Date Picker */}
@@ -377,7 +394,7 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
         }}>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr',
+            gridTemplateColumns: '2fr 1.2fr 0.8fr 1.2fr 1.2fr 1fr',
             background: '#f8f9fa',
             padding: '16px 20px',
             borderBottom: '1px solid #e9ecef',
@@ -388,54 +405,67 @@ const SalesModule: React.FC<SalesModuleProps> = ({ storeId }) => {
             <div>Transaction ID</div>
             <div>Date & Time</div>
             <div>Items</div>
-            <div>Payment Method</div>
+            <div style={{ textAlign: 'center' }}>Payment Method</div>
             <div>Customer</div>
-            <div>Total Amount</div>
+            <div style={{ textAlign: 'right' }}>Total Amount</div>
           </div>
 
-          {sales.map((sale) => (
+          {sales.map((sale, index) => (
             <div
               key={sale._id}
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr',
+                gridTemplateColumns: '2fr 1.2fr 0.8fr 1.2fr 1.2fr 1fr',
                 padding: '16px 20px',
                 borderBottom: '1px solid #f1f3f4',
                 cursor: 'pointer',
-                transition: 'background-color 0.2s'
+                transition: 'background-color 0.2s',
+                alignItems: 'center',
+                background: index % 2 === 0 ? 'white' : '#fcfcfd'
               }}
               onClick={() => setSelectedSale(sale)}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = '#f8f9fa';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'white';
+                e.currentTarget.style.backgroundColor = index % 2 === 0 ? 'white' : '#fcfcfd';
               }}
             >
               <div style={{ fontWeight: '500', color: '#e53e3e' }}>
                 {sale.transactionId || 'N/A'}
               </div>
-              <div style={{ color: '#666', fontSize: '13px' }}>
-                {formatDateTime(sale.dateTime || '')}
+              <div style={{ color: '#666', fontSize: 13, lineHeight: 1.2 }}>
+                <div>{new Date(sale.dateTime || '').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                <div style={{ fontSize: 12, color: '#9aa0a6' }}>{new Date(sale.dateTime || '').toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
               </div>
               <div style={{ color: '#666' }}>
                 {(sale.items || []).length} item{(sale.items || []).length !== 1 ? 's' : ''}
               </div>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                color: getPaymentMethodColor(sale.paymentMethod || 'cash')
-              }}>
-                <span>{getPaymentMethodIcon(sale.paymentMethod || 'cash')}</span>
-                <span style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: '500' }}>
-                  {sale.paymentMethod || 'cash'}
-                </span>
-              </div>
+              {(() => {
+                const method = sale.paymentMethod || 'cash';
+                const pill = getPaymentPillStyle(method);
+                return (
+                  <div style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: 6,
+                    color: pill.color,
+                    background: pill.background,
+                    padding: '4px 10px',
+                    borderRadius: 999,
+                    justifySelf: 'center'
+                  }}>
+                    <span style={{ fontSize: 12 }}>{getPaymentMethodIcon(method)}</span>
+                    <span style={{ textTransform: 'uppercase', fontSize: 12, fontWeight: 600 }}>
+                      {method}
+                    </span>
+                  </div>
+                );
+              })()}
               <div style={{ color: '#666', fontSize: '13px' }}>
                 {sale.customerDetails?.name || 'Walk-in Customer'}
               </div>
-              <div style={{ fontWeight: '600', color: '#38a169' }}>
+              <div style={{ fontWeight: '600', color: '#38a169', textAlign: 'right' }}>
                 {formatCurrency(sale.grandTotal || 0)}
               </div>
             </div>

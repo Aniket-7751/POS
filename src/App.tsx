@@ -1,23 +1,27 @@
 import React from 'react';
+import { FiGrid, FiClipboard, FiBriefcase, FiHome, FiPackage, FiTag, FiShoppingCart, FiSettings, FiBarChart2, FiLogOut } from 'react-icons/fi';
 
 import './App.css';
 
 import POSInterface from './pages/POSInterface';
 import LoginSelector from './components/LoginSelector';
+import SignupSelector from './components/SignupSelector';
 import ResetPassword from './components/ResetPassword';
 import NoticeHeader from './components/NoticeHeader';
 
 import OrganizationModule from './modules/organization/OrganizationModule';
 import StoreModule from './modules/store/StoreModule';
+import StoreSettings from './modules/store/StoreSettings';
 import CategoryModule from './modules/inventory/category/CategoryModule';
 import CatalogueModule from './modules/inventory/catalogue/CatalogueModule';
 import AdminDashboard from './modules/admin/AdminDashboard';
 import AdminOrderRequests from './modules/admin/orders/AdminOrderRequests';
 import StoreOrders from './modules/store/orders/StoreOrders';
 import SalesModule from './modules/sales/SalesModule';
+import StoreDashboard from './modules/store/StoreDashboard';
 import BarcodeList from './modules/inventory/catalogue/BarcodeList';
 
-type Page = 'admin' | 'admin-orders' | 'pos' | 'organization' | 'store' | 'inventory' | 'category' | 'catalogue' | 'sales' | 'store-orders' | 'barcodes';
+type Page = 'admin' | 'admin-orders' | 'pos' | 'organization' | 'store' | 'inventory' | 'category' | 'catalogue' | 'sales' | 'store-orders' | 'barcodes' | 'store-settings' | 'store-dashboard';
           {/* Barcode Section for Org */}
 
 interface User {
@@ -36,6 +40,45 @@ function App() {
   const [token, setToken] = React.useState<string | null>(localStorage.getItem('token'));
   const [resetToken, setResetToken] = React.useState<string | null>(null);
   const [showNoticeHeader, setShowNoticeHeader] = React.useState<boolean>(true);
+  const [showSignup, setShowSignup] = React.useState<boolean>(false);
+  const [signupStoreId, setSignupStoreId] = React.useState<string | null>(null);
+  const [signupEmail, setSignupEmail] = React.useState<string | null>(null);
+  const [signupToken, setSignupToken] = React.useState<string | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState<boolean>(false);
+
+  // Theme hooks must be after all state declarations
+  const [theme, setTheme] = React.useState<string>('light');
+  React.useEffect(() => {
+    const storeData = localStorage.getItem('store');
+    if (storeData) {
+      try {
+        const store = JSON.parse(storeData);
+        if (store.theme) setTheme(store.theme);
+      } catch {}
+    }
+  }, [page]);
+
+  // Listen for theme changes from StoreSettings
+  React.useEffect(() => {
+    const handler = (e: any) => {
+      if (e?.detail?.theme) setTheme(e.detail.theme);
+    };
+    window.addEventListener('storeThemeUpdated', handler as EventListener);
+    return () => window.removeEventListener('storeThemeUpdated', handler as EventListener);
+  }, []);
+
+  // Listen for complete store settings update (e.g., profit margin)
+  React.useEffect(() => {
+    const handler = (e: any) => {
+      try {
+        if (e?.detail?.store) {
+          localStorage.setItem('store', JSON.stringify(e.detail.store));
+        }
+      } catch {}
+    };
+    window.addEventListener('storeSettingsUpdated', handler as EventListener);
+    return () => window.removeEventListener('storeSettingsUpdated', handler as EventListener);
+  }, []);
 
   const isOrganizationUser = user?.userType === 'organization';
   const isStoreUser = user?.userType === 'store';
@@ -102,31 +145,65 @@ function App() {
     localStorage.removeItem('userType');
   };
 
-  // Check for reset password token in URL
+  // Check for reset password token and signup parameters in URL
   React.useEffect(() => {
     console.log('Current URL:', window.location.href);
     console.log('Current search params:', window.location.search);
     console.log('Current pathname:', window.location.pathname);
     
-    let resetToken = null;
-    
-    // Try to get token from query parameters first
     const urlParams = new URLSearchParams(window.location.search);
-    resetToken = urlParams.get('token');
+    const rawToken = urlParams.get('token');
+    const storeId = urlParams.get('storeId');
+    const signupEmailParam = urlParams.get('email');
+    // If storeId or email are present and token is present, treat token as signup token.
+    const signupTokenParam = urlParams.get('signupToken') || ((storeId || signupEmailParam) ? rawToken : null);
+    const resetTokenParam = (storeId || signupEmailParam) ? null : rawToken;
     
-    // If not found in query params, try to extract from pathname
-    if (!resetToken && window.location.pathname.includes('/reset-password')) {
-      const pathParams = new URLSearchParams(window.location.pathname.split('?')[1] || '');
-      resetToken = pathParams.get('token');
+    // 1) Reset password takes priority
+    if (
+      window.location.pathname.includes('/reset-password') ||
+      (!!resetTokenParam && !storeId && !signupEmailParam && !signupTokenParam)
+    ) {
+      console.log('Reset password URL detected with token:', resetTokenParam);
+      if (resetTokenParam) {
+        localStorage.setItem('resetToken', resetTokenParam);
+        setResetToken(resetTokenParam);
+      }
+      window.history.replaceState({}, document.title, '/');
+      return;
+    }
+
+    // 2) Signup link (explicit /signup or has storeId or has both email+signupToken)
+    if (
+      window.location.pathname.includes('/signup') ||
+      storeId ||
+      signupEmailParam ||
+      signupTokenParam
+    ) {
+      console.log('Signup URL detected with params:', { storeId, signupEmailParam, signupTokenParam });
+      setSignupStoreId(storeId);
+      setSignupEmail(signupEmailParam);
+      setSignupToken(signupTokenParam);
+      setShowSignup(true);
+      // Ensure we are not considered authenticated while in signup flow
+      setUser(null);
+      setToken(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userType');
+      // Clean up the URL - redirect to root
+      window.history.replaceState({}, document.title, '/');
+      return;
     }
     
-    console.log('Extracted token:', resetToken);
-    
-    if (resetToken) {
-      console.log('Reset token found in URL:', resetToken);
+    // 3) Fallback: Check for reset token stored previously
+    if (resetTokenParam) {
+      console.log('Reset token found in URL (fallback):', resetTokenParam);
       // Store the token for the reset password component
-      localStorage.setItem('resetToken', resetToken);
-      setResetToken(resetToken);
+      localStorage.setItem('resetToken', resetTokenParam);
+      setResetToken(resetTokenParam);
       // Clean up the URL - redirect to root
       window.history.replaceState({}, document.title, '/');
       console.log('Token stored in localStorage');
@@ -143,7 +220,14 @@ function App() {
 
   // Guard against invalid page selection for current role
   React.useEffect(() => {
-    if (isStoreUser && page !== 'pos' && page !== 'sales' && page !== 'store-orders') {
+    if (
+      isStoreUser &&
+      page !== 'pos' &&
+      page !== 'sales' &&
+      page !== 'store-orders' &&
+      page !== 'store-settings' &&
+      page !== 'store-dashboard'
+    ) {
       setPage('pos');
     }
     if (isOrganizationUser && page === 'pos') {
@@ -175,26 +259,43 @@ function App() {
     );
   }
 
+  // Show signup page if signup URL is detected
+  if (showSignup) {
+    return (
+      <SignupSelector 
+        onBackToLogin={() => {
+          setShowSignup(false);
+          setSignupStoreId(null);
+          setSignupEmail(null);
+          setSignupToken(null);
+          // Always land on login page: clear any existing auth
+          setUser(null);
+          setToken(null);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          localStorage.removeItem('userId');
+          localStorage.removeItem('userRole');
+          localStorage.removeItem('userType');
+        }}
+        storeId={signupStoreId || null}
+        email={signupEmail || null}
+        token={signupToken || null}
+      />
+    );
+  }
+
   // Show login if not authenticated
   if (!user || !token) {
     return <LoginSelector onLogin={handleLogin} />;
   }
+
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f6fa', display: 'flex' }}>
-      <aside style={{ 
-        width: 280, 
+    <div className={theme === 'dark' ? 'theme-dark app-shell' : 'theme-light app-shell'} style={{ background: theme === 'dark' ? '#111' : '#f5f6fa' }}>
+      <aside className={sidebarCollapsed ? 'app-aside collapsed' : 'app-aside'} style={{ 
         background: '#1a1a1a', 
         color: '#fff',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
         padding: '0',
-        boxShadow: '2px 0 8px rgba(0,0,0,0.1)',
-        overflow: 'hidden',
-        zIndex: 1000
+        boxShadow: '2px 0 8px rgba(0,0,0,0.1)'
       }}>
         {/* Header Section */}
         <div style={{ 
@@ -202,7 +303,7 @@ function App() {
           borderBottom: '1px solid #333',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: sidebarCollapsed ? 'center' : 'space-between'
         }}>
           <div style={{ 
             display: 'flex', 
@@ -220,37 +321,34 @@ function App() {
             }}>
               <span style={{ fontSize: '20px' }}>🐔</span>
             </div>
-            <div>
-              <div style={{ 
-                fontSize: '18px', 
-                fontWeight: '700', 
-                color: '#e53e3e',
-                lineHeight: '1.2'
-              }}>
-                SUGUNA CHICKEN
-              </div>
-              <div style={{ 
-                fontSize: '12px', 
-                color: '#38a169',
-                fontWeight: '500'
-              }}>
-                POS System
-              </div>
+            <div className="nav-text" style={{ display: sidebarCollapsed ? 'none' : 'block' }}>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: '#e53e3e', lineHeight: '1.2' }}>SUGUNA CHICKEN</div>
+              <div style={{ fontSize: '12px', color: '#38a169', fontWeight: '500' }}>POS System</div>
             </div>
           </div>
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="aside-toggle"
+          >
+            {sidebarCollapsed ? '»' : '«'}
+          </button>
         </div>
 
         {/* Navigation Content */}
-        <div style={{ 
-          flex: 1, 
-          display: 'flex', 
-          flexDirection: 'column', 
-          padding: '20px 0',
-          overflowY: 'auto'
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          padding: sidebarCollapsed ? '12px 0' : '20px 0',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          maxWidth: '100%',
+          alignItems: sidebarCollapsed ? 'center' : undefined
         }}>
           {/* Dashboard Section */}
           {isOrganizationUser && (
-            <div style={{ padding: '0 20px 20px 20px' }}>
+            <div style={{ padding: sidebarCollapsed ? '0 8px 12px 8px' : '0 20px 20px 20px', width: '100%' }}>
               <button style={{
                 width: '100%',
                 margin: '0 0 8px 0',
@@ -267,9 +365,9 @@ function App() {
                 alignItems: 'center',
                 gap: '12px',
                 textAlign: 'left'
-              }} onClick={() => setPage('admin')}>
-                <span style={{ fontSize: '16px' }}>📊</span>
-                Admin Dashboard
+              }} onClick={() => setPage('admin')} title="Admin Dashboard">
+                <FiGrid size={18} />
+                <span className="nav-text">Admin Dashboard</span>
               </button>
               <button style={{
                 width: '100%',
@@ -287,9 +385,9 @@ function App() {
                 alignItems: 'center',
                 gap: '12px',
                 textAlign: 'left'
-              }} onClick={() => setPage('admin-orders')}>
-                <span style={{ fontSize: '16px' }}>�</span>
-                Order Requests
+              }} onClick={() => setPage('admin-orders')} title="Order Requests">
+                <FiClipboard size={18} />
+                <span className="nav-text">Order Requests</span>
               </button>
             </div>
           )}
@@ -297,9 +395,10 @@ function App() {
           {/* Master Data Section */}
           {isOrganizationUser && (
             <div style={{ 
-              padding: '0 20px 10px 20px'
+              padding: sidebarCollapsed ? '0 8px 10px 8px' : '0 20px 10px 20px',
+              width: '100%'
             }}>
-              <div style={{ 
+              <div className="section-title" style={{ 
                 fontSize: '12px', 
                 fontWeight: '600', 
                 color: '#888', 
@@ -326,9 +425,9 @@ function App() {
                 alignItems: 'center',
                 gap: '12px',
                 textAlign: 'left'
-              }} onClick={() => setPage('organization')}>
-                <span style={{ fontSize: '16px' }}>🏢</span>
-                Organization
+              }} onClick={() => setPage('organization')} title="Organization">
+                <FiBriefcase size={18} />
+                <span className="nav-text">Organization</span>
               </button>
               <button style={{ 
                 width: '100%', 
@@ -346,9 +445,9 @@ function App() {
                 alignItems: 'center',
                 gap: '12px',
                 textAlign: 'left'
-              }} onClick={() => setPage('store')}>
-                <span style={{ fontSize: '16px' }}>🏪</span>
-                Store
+              }} onClick={() => setPage('store')} title="Store">
+                <FiHome size={18} />
+                <span className="nav-text">Store</span>
               </button>
             </div>
           )}
@@ -356,9 +455,10 @@ function App() {
           {/* Inventory Section */}
           {isOrganizationUser && (
           <div style={{ 
-            padding: '0 20px 10px 20px'
+            padding: sidebarCollapsed ? '0 8px 10px 8px' : '0 20px 10px 20px',
+            width: '100%'
           }}>
-            <div style={{ 
+            <div className="section-title" style={{ 
               fontSize: '12px', 
               fontWeight: '600', 
               color: '#888', 
@@ -384,9 +484,9 @@ function App() {
               alignItems: 'center',
               gap: '12px',
               textAlign: 'left'
-            }} onClick={() => setPage('category')}>
-              <span style={{ fontSize: '16px' }}>📂</span>
-              Category
+            }} onClick={() => setPage('category')} title="Category">
+              <FiGrid size={18} />
+              <span className="nav-text">Category</span>
             </button>
             <button style={{ 
               width: '100%', 
@@ -404,9 +504,9 @@ function App() {
               alignItems: 'center',
               gap: '12px',
               textAlign: 'left'
-            }} onClick={() => setPage('catalogue')}>
-              <span style={{ fontSize: '16px' }}>📦</span>
-              Catalogue
+            }} onClick={() => setPage('catalogue')} title="Catalogue">
+              <FiPackage size={18} />
+              <span className="nav-text">Catalogue</span>
             </button>
             <button style={{
                 width: '100%',
@@ -424,19 +524,40 @@ function App() {
                 alignItems: 'center',
                 gap: '12px',
                 textAlign: 'left'
-              }} onClick={() => setPage('barcodes')}>
-                <span style={{ fontSize: '16px' }}>🏷️</span>
-                Barcode List
+              }} onClick={() => setPage('barcodes')} title="Barcode List">
+                <FiTag size={18} />
+                <span className="nav-text">Barcode List</span>
             </button>
           </div>
           )}
 
           {/* POS Interface */}
           <div style={{ 
-            padding: '0 20px 10px 20px'
+            padding: sidebarCollapsed ? '0 8px 10px 8px' : '0 20px 10px 20px',
+            width: '100%'
           }}>
             {isStoreUser && (
               <>
+                <button style={{
+                  width: '100%',
+                  margin: '0 0 8px 0',
+                  padding: '12px 16px',
+                  background: page==='store-dashboard' ? '#e53e3e' : 'transparent',
+                  color: page==='store-dashboard' ? '#fff' : '#ccc',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  textAlign: 'left'
+                }} onClick={() => setPage('store-dashboard')} title="Store Dashboard">
+                  <FiGrid size={18} />
+                  <span className="nav-text">Store Dashboard</span>
+                </button>
                 <button style={{
                   width: '100%',
                   margin: '0 0 8px 0',
@@ -453,9 +574,9 @@ function App() {
                   alignItems: 'center',
                   gap: '12px',
                   textAlign: 'left'
-                }} onClick={() => setPage('pos')}>
-                  <span style={{ fontSize: '16px' }}>🛒</span>
-                  POS Interface
+                }} onClick={() => setPage('pos')} title="POS Interface">
+                  <FiShoppingCart size={18} />
+                  <span className="nav-text">POS Interface</span>
                 </button>
                 <button style={{
                   width: '100%',
@@ -473,9 +594,29 @@ function App() {
                   alignItems: 'center',
                   gap: '12px',
                   textAlign: 'left'
-                }} onClick={() => setPage('store-orders')}>
-                  <span style={{ fontSize: '16px' }}>📦</span>
-                  My Orders
+                }} onClick={() => setPage('store-orders')} title="My Orders">
+                  <FiClipboard size={18} />
+                  <span className="nav-text">My Orders</span>
+                </button>
+                <button style={{
+                  width: '100%',
+                  margin: '0 0 8px 0',
+                  padding: '12px 16px',
+                  background: page==='store-settings' ? '#e53e3e' : 'transparent',
+                  color: page==='store-settings' ? '#fff' : '#ccc',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  textAlign: 'left'
+                }} onClick={() => setPage('store-settings')} title="Settings">
+                  <FiSettings size={18} />
+                  <span className="nav-text">Settings</span>
                 </button>
               </>
             )}
@@ -495,97 +636,124 @@ function App() {
               alignItems: 'center',
               gap: '12px',
               textAlign: 'left'
-            }} onClick={() => setPage('sales')}>
-              <span style={{ fontSize: '16px' }}>📊</span>
-              My Sales
+            }} onClick={() => setPage('sales')} title="Sales">
+              <FiBarChart2 size={18} />
+              <span className="nav-text">Sales</span>
             </button>
           </div>
         </div>
 
-        {/* User Info - Fixed at Bottom */}
-        <div style={{ 
-          padding: '20px',
+        {/* User / Logout - Fixed at Bottom */}
+
+        <div style={{
+          padding: '10px',
           borderTop: '1px solid #333',
           background: '#1a1a1a'
         }}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '12px',
-            marginBottom: '12px'
-          }}>
-            <div style={{ 
-              width: '40px', 
-              height: '40px', 
-              background: 'linear-gradient(45deg, #e53e3e, #38a169)', 
-              borderRadius: '50%', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              fontSize: '16px'
-            }}>
-              {user.name.charAt(0).toUpperCase()}
+          {sidebarCollapsed ? (
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <button
+                onClick={handleLogout}
+                title="Logout"
+                style={{
+                  width: 32,
+                  height: 32,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'transparent',
+                  color: '#ccc',
+                  border: '1px solid #333',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                <FiLogOut size={15} />
+              </button>
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ 
-                fontSize: '14px', 
-                fontWeight: '600', 
-                color: '#fff',
-                marginBottom: '2px'
+          ) : (
+            <>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '8px'
               }}>
-                {user.name}
+                <div style={{
+                  width: '28px',
+                  height: '28px',
+                  background: 'linear-gradient(45deg, #e53e3e, #38a169)',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '13px'
+                }}>
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    color: '#fff',
+                    marginBottom: '1px'
+                  }}>
+                    {user.name}
+                  </div>
+                  <div style={{
+                    fontSize: '9px',
+                    color: '#888',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    {user.userType === 'organization' ? 'Organization' : 'Store'} - {user.role}
+                  </div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    padding: '5px 10px',
+                    background: 'transparent',
+                    color: '#888',
+                    border: '1px solid #333',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    transition: 'all 0.2s ease',
+                    minWidth: '48px'
+                  }}
+                  onMouseOver={(e) => {
+                    const target = e.target as HTMLButtonElement;
+                    target.style.background = '#e53e3e';
+                    target.style.color = '#fff';
+                    target.style.borderColor = '#e53e3e';
+                  }}
+                  onMouseOut={(e) => {
+                    const target = e.target as HTMLButtonElement;
+                    target.style.background = 'transparent';
+                    target.style.color = '#888';
+                    target.style.borderColor = '#333';
+                  }}
+                >
+                  Logout
+                </button>
               </div>
-              <div style={{ 
-                fontSize: '11px', 
-                color: '#888',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                {user.userType === 'organization' ? 'Organization' : 'Store'} - {user.role}
-              </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              style={{
-                padding: '8px',
-                background: 'transparent',
-                color: '#888',
-                border: '1px solid #333',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseOver={(e) => {
-                const target = e.target as HTMLButtonElement;
-                target.style.background = '#e53e3e';
-                target.style.color = '#fff';
-                target.style.borderColor = '#e53e3e';
-              }}
-              onMouseOut={(e) => {
-                const target = e.target as HTMLButtonElement;
-                target.style.background = 'transparent';
-                target.style.color = '#888';
-                target.style.borderColor = '#333';
-              }}
-            >
-              Logout
-            </button>
-          </div>
-          {(user.organization || user.store) && (
-            <div style={{ 
-              fontSize: '12px', 
-              color: '#666',
-              paddingLeft: '52px'
-            }}>
-              {user.organization ? user.organization.organizationName : user.store?.storeName}
-            </div>
+              {(user.organization || user.store) && (
+                <div style={{
+                  fontSize: '10px',
+                  color: '#666',
+                  paddingLeft: '36px'
+                }}>
+                  {user.userType === 'store' ? (user.store?.storeName || '') : (user.organization?.organizationName || '')}
+                </div>
+              )}
+            </>
           )}
         </div>
       </aside>
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start', padding: '0', marginLeft: '280px', minHeight: '100vh', width: 'calc(100% - 280px)' }}>
-        {/* Notice Header - appears on all pages */}
-        {showNoticeHeader && (
+      <main className={sidebarCollapsed ? 'app-main collapsed' : 'app-main'}>
+        {/* Notice Header - only on POS interface page */}
+        {page === 'pos' && showNoticeHeader && (
           <div style={{ position: 'relative', zIndex: 1000 }}>
             <NoticeHeader 
               autoScroll={true}
@@ -598,9 +766,12 @@ function App() {
             />
           </div>
         )}
-  {page === 'admin' && <AdminDashboard />}
-  {page === 'admin-orders' && <AdminOrderRequests />}
-  {page === 'pos' && (
+        {page === 'admin' && <AdminDashboard />}
+        {page === 'admin-orders' && <AdminOrderRequests />}
+        {page === 'store-dashboard' && (
+          <StoreDashboard storeId={user.userType === 'store' ? user.store?._id : undefined} />
+        )}
+        {page === 'pos' && (
           <POSInterface
             storeId={user.userType === 'store' ? user.store?._id : undefined}
             storeName={user.userType === 'store' ? user.store?.storeName : undefined}
@@ -610,12 +781,15 @@ function App() {
         {page === 'store' && <StoreModule />}
         {page === 'category' && <CategoryModule />}
         {page === 'catalogue' && <CatalogueModule />}
-  {page === 'store-orders' && <StoreOrders />}
-  {page === 'barcodes' && <BarcodeList />}
-  {page === 'sales' && (
+        {page === 'store-orders' && <StoreOrders />}
+        {page === 'barcodes' && <BarcodeList />}
+        {page === 'sales' && (
           <SalesModule
             storeId={user.userType === 'store' ? user.store?._id : undefined}
           />
+        )}
+        {page === 'store-settings' && user.userType === 'store' && (
+          <StoreSettings storeId={user.store?._id} />
         )}
       </main>
     </div>

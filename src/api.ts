@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const API_BASE = 'http://localhost:5050/api';
 // const API_BASE = 'https://apis.pos.hutechsolutions.in/api';
+
 // Create axios instance with default config
  export const api = axios.create({
   baseURL: API_BASE,
@@ -38,7 +39,8 @@ export const authAPI = {
   
   // Signup endpoints
   organizationSignup: (data: { organizationId: string; email: string; password: string }) => api.post('/auth/organization/signup', data),
-  storeSignup: (data: { storeId: string; email: string; password: string }) => api.post('/auth/store/signup', data),
+  storeSignup: (data: { storeId: string; email: string; password: string; token?: string }) => api.post('/auth/store/signup', data),
+  verifyStoreSignupToken: (data: { email: string; storeId: string; token: string }) => api.post('/auth/store/verify-signup-token', data),
   
   // Legacy login endpoints (keeping for backward compatibility)
   organizationLogin: (data: { organizationId: string; email: string; password: string }) => api.post('/auth/organization/login', data),
@@ -69,8 +71,15 @@ export const storeAPI = {
   getAll: () => api.get('/stores'),
   getById: (id: string) => api.get(`/stores/${id}`),
   create: (data: any) => api.post('/stores', data),
-  update: (id: string, data: any) => api.put(`/stores/${id}`, data),
+  update: (id: string, data: any) => {
+    console.log('Store API update called with:', { id, data });
+    return api.put(`/stores/${id}`, data);
+  },
   delete: (id: string) => api.delete(`/stores/${id}`),
+  // Store pricing overrides
+  listPrices: (storeId: string, sku?: string) => api.get(`/stores/${storeId}/prices${sku ? `?sku=${encodeURIComponent(sku)}` : ''}`),
+  upsertPrice: (storeId: string, sku: string, data: any) => api.put(`/stores/${storeId}/prices/${sku}`, data),
+  getEffectivePrice: (storeId: string, sku: string) => api.get(`/stores/${storeId}/prices/${sku}/effective`),
 };
 
 // Category API
